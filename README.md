@@ -16,7 +16,7 @@
 
 <br/>
 
-[⬇️ Descargar `.exe`](https://github.com/jpinchi/pliego/releases/download/v1.0.0/Pliego%20Setup%201.0.0.exe) · [📦 Portable](https://github.com/jpinchi/pliego/releases/download/v1.0.0/Pliego%201.0.0.exe) · [📖 Ver funciones](#-funciones-destacadas)
+[⬇️ Descargar `.exe`](https://github.com/jpinchi/pliego/releases/download/v1.0.0/Pliego.Setup.1.0.0.exe) · [📦 Portable](https://github.com/jpinchi/pliego/releases/download/v1.0.0/Pliego.1.0.0.exe) · [📖 Ver funciones](#-funciones-destacadas)
 
 </div>
 
