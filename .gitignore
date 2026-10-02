@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+
+# Salida del empaquetador
+dist/
+out/
+
+# Estado de ventana y preferencias del usuario (generados en runtime)
+# No pertenecen al repo; cada instalación crea los suyos
+*.json.bak
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables de entorno
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.user
