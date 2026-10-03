@@ -10,7 +10,7 @@
 
 [![Electron](https://img.shields.io/badge/Electron-31-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Plataforma](https://img.shields.io/badge/Windows-10%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/jpinchi/pliego/releases)
-[![Versión](https://img.shields.io/badge/versión-1.0.0-f0a020?style=flat-square)](https://github.com/jpinchi/pliego/releases)
+[![Versión](https://img.shields.io/github/v/release/jpinchi/pliego?style=flat-square&label=versi%C3%B3n&color=f0a020)](https://github.com/jpinchi/pliego/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-46c08a?style=flat-square)](LICENSE)
 [![100% Offline](https://img.shields.io/badge/100%25-offline-8a909e?style=flat-square)]()
 
@@ -64,13 +64,13 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
 ### Opción A — Instalador (recomendado)
 
 1. Ve a [**Releases**](https://github.com/jpinchi/pliego/releases)
-2. Descarga `Pliego-Setup-1.0.0.exe`
+2. Descarga `Pliego.Setup.1.0.0.exe`
 3. Ejecuta el instalador y sigue los pasos
 4. Abre Pliego desde el menú Inicio o el acceso directo del escritorio
 
 ### Opción B — Versión portable (sin instalar)
 
-1. Descarga `Pliego-1.0.0-portable.exe`
+1. Descarga `Pliego.1.0.0.exe` desde [**Releases**](https://github.com/jpinchi/pliego/releases)
 2. Ejecuta directamente — no necesita instalación ni permisos de administrador
 
 ### Opción C — Ejecutar desde el código fuente
@@ -88,7 +88,7 @@ Para generar el instalador `.exe`:
 npm run dist:win
 ```
 
-> Requiere [Node.js 18+](https://nodejs.org) y [Git](https://git-scm.com/).
+> Requiere [Node.js 20.9+](https://nodejs.org) y [Git](https://git-scm.com/).
 
 ---
 
@@ -147,8 +147,6 @@ pdf-lib no tiene una API de alto nivel para `/Outlines`. La solución fue escrib
 ## 🗺️ Próximos pasos
 
 - [ ] Soporte para anotaciones de comentario (sticky notes con hilo de respuestas)
-- [ ] Exportar selección de páginas (en vez de siempre el documento completo)
-- [ ] Drag & drop de archivos sobre la ventana para abrirlos
 - [ ] Firma con certificado digital (PKCS#12)
 
 ---
