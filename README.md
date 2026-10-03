@@ -48,12 +48,12 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
 
 ## 🖼️ Galería
 
-> Las capturas se encuentran en [`docs/screenshots/`](docs/screenshots/).
+> Las capturas se encuentran en [`docs/screenshots/`](docs/screenshots/). Para regenerarlas: `npm install` y luego `node docs/screenshots/capture.mjs`.
 
 | Vista | Descripción |
 |---|---|
-| ![Pantalla principal](docs/screenshots/main-dark.png) | **Pantalla principal** — panel de herramientas, vista del PDF y barra superior |
-| ![Herramientas de anotación](docs/screenshots/annotations.png) | **Anotaciones** — dibujo, resaltado y texto sobre el documento |
+| ![Pantalla principal](docs/screenshots/main-dark.png) | **Pantalla principal** — un PDF anotado y firmado, con el panel de herramientas y las páginas |
+| ![Herramientas de anotación](docs/screenshots/annotations.png) | **Anotaciones** — resaltado, formas, dibujo a mano y texto sobre el documento |
 | ![Panel de firma](docs/screenshots/signature.png) | **Firma digital** — tres modos: escribir, dibujar o insertar imagen |
 | ![Tema claro](docs/screenshots/main-light.png) | **Tema claro** — alternativa para ambientes con luz natural |
 
