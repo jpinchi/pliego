@@ -1,10 +1,6 @@
 <div align="center">
 
-<img src="build/icon.png" alt="Pliego logo" width="96"/>
-
-# Pliego
-
-### Editor de PDF de escritorio para Windows — sin servidores, sin suscripción, sin límites.
+<img src="docs/banner.svg" alt="Pliego — editor de PDF de escritorio para Windows, sin servidores, sin suscripción, sin límites" width="100%" />
 
 <br/>
 
