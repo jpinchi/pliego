@@ -24,6 +24,7 @@
 <br/>
 
 <a id="que-es"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-que-es-m.svg" />
   <img src="docs/readme/h-que-es.svg" alt="01 · ¿Qué es Pliego?" width="100%" />
@@ -39,6 +40,7 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
 <br/><br/>
 
 <a id="galeria"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-galeria-m.svg" />
   <img src="docs/readme/h-galeria.svg" alt="02 · Galería" width="100%" />
@@ -68,6 +70,7 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
 <br/>
 
 <a id="funciones"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-funciones-m.svg" />
   <img src="docs/readme/h-funciones.svg" alt="03 · Funciones" width="100%" />
@@ -81,6 +84,7 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
 <br/><br/>
 
 <a id="instalacion"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-instalacion-m.svg" />
   <img src="docs/readme/h-instalacion.svg" alt="04 · Instalación" width="100%" />
@@ -118,6 +122,7 @@ npm run dist:win
 <br/>
 
 <a id="como-funciona"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-como-funciona-m.svg" />
   <img src="docs/readme/h-como-funciona.svg" alt="05 · Cómo funciona" width="100%" />
@@ -138,6 +143,7 @@ npm run dist:win
 <br/>
 
 <a id="retos"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-retos-m.svg" />
   <img src="docs/readme/h-retos.svg" alt="06 · Retos y decisiones" width="100%" />
@@ -158,6 +164,7 @@ pdf-lib no tiene una API de alto nivel para `/Outlines`. La solución fue escrib
 <br/>
 
 <a id="seguridad"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-seguridad-m.svg" />
   <img src="docs/readme/h-seguridad.svg" alt="07 · Calidad y seguridad" width="100%" />
@@ -171,6 +178,7 @@ pdf-lib no tiene una API de alto nivel para `/Outlines`. La solución fue escrib
 <br/><br/>
 
 <a id="proximos"></a>
+
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/h-proximos-m.svg" />
   <img src="docs/readme/h-proximos.svg" alt="08 · Próximos pasos" width="100%" />
