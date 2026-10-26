@@ -6,13 +6,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 ## [1.1.3] — 2026-10-26
 
 ### Añadido
-- 
+- **Ajustes → Actualizaciones:** versión instalada, botón **Buscar actualizaciones**, estado de la búsqueda y de la descarga, y botón **Reiniciar** cuando hay una versión lista
 
 ### Cambiado
-- 
+- La pantalla de inicio tiene una barra de carga que sigue la carga real de la app; la app se abre cuando llega al 100 %
+- Los avisos de actualización siguen el idioma elegido (ES/EN)
 
 ### Corregido
-- 
+- Ya no se ve la ventana de la app, vacía y a pantalla completa, detrás de la pantalla de inicio cuando se cerró maximizada
+- El aviso con **Reiniciar** acepta clics
 
 ## [1.1.2] — 2026-10-26
 
