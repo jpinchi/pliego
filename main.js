@@ -288,7 +288,10 @@ function setupAutoUpdater() {
 
 // Instalar actualización descargada (el renderer lo pide)
 ipcMain.handle("update:install", () => {
-  autoUpdater.quitAndInstall(false, true);
+  // Silencioso: el instalador es tipo asistente (oneClick:false) y si no abriría el asistente completo.
+  // Segundo argumento: volver a abrir Pliego al terminar.
+  logLine("update: instalando y reiniciando");
+  autoUpdater.quitAndInstall(true, true);
 });
 
 // ── Ajuste del splash desde preferencias ─────────────────────────────────────
