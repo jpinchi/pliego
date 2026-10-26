@@ -1,7 +1,7 @@
 {
   "name": "pliego",
   "productName": "Pliego",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Pliego — Editor de PDF de escritorio",
   "main": "main.js",
   "author": "jpinchi",
