@@ -61,8 +61,8 @@
       <g transform="translate(8 14) scale(.8333)" fill="none" stroke="#46c08a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="tick" style="animation-delay: 2.30s" pathLength="1" d="M20 6 9 17l-5-5"/></g>
       <text class="d" x="48" y="21" font-size="18.5" fill="#f4f1ea">Sin telemetría</text>
       <text class="t" x="48" y="44" font-size="15.5" fill="#9aa1ad">Sin servidores ni datos de uso</text>
-      <rect x="691.0" y="10" width="109.0" height="28" rx="8" fill="#1c2128" stroke="#363c47"/>
-      <text class="m" x="745.5" y="29" font-size="13.5" text-anchor="middle" fill="#f0a020">0 requests</text>
+      <rect x="658.6" y="10" width="141.4" height="28" rx="8" fill="#1c2128" stroke="#363c47"/>
+      <text class="m" x="729.3" y="29" font-size="13.5" text-anchor="middle" fill="#f0a020">0 datos de uso</text>
       <path d="M48 64H800" stroke="#2a2f38"/>
     </g><g transform="translate(360 238)">
       <circle cx="18" cy="24" r="16" fill="#46c08a" fill-opacity=".14"/>
