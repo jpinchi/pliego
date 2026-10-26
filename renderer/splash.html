@@ -12,24 +12,23 @@
     --line:   #363c47;
     --ink:    #e7e9ee;
     --muted:  #8a909e;
-    --track:  rgba(255,255,255,.06);
+    --track:  rgba(255,255,255,.08);
     --accent: #f0a020;
-    --accent-2: #c97f12;
     --ui:   "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 
     --ease-out:    cubic-bezier(.16, 1, .3, 1);
     --ease-spring: cubic-bezier(.34, 1.36, .64, 1);
-    --ease-in:     cubic-bezier(.4, 0, 1, 1);
     --enter: 420ms;
-    --exit:  260ms;
+    --bar:   420ms;
   }
   :root.light {
     --bg:     #ffffff;
     --line:   #d6dae1;
     --ink:    #1c2128;
     --muted:  #5b6270;
-    --track:  rgba(0,0,0,.06);
+    --track:  rgba(0,0,0,.07);
+    --accent: #e8951a;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -50,22 +49,20 @@
     box-shadow: inset 0 0 0 1px var(--line);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    transition: opacity var(--exit) var(--ease-in), transform var(--exit) var(--ease-in);
+    padding-bottom: 12px;
   }
-  .frame.out { opacity: 0; transform: scale(.985); }
 
   .enter {
     opacity: 0;
     transform: translateY(8px);
     animation: enter var(--enter) var(--ease-out) forwards;
-    animation-delay: calc(80ms + var(--i, 0) * 50ms);
+    animation-delay: calc(60ms + var(--i, 0) * 50ms);
   }
 
   .logo {
     width: 64px; height: 64px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     transform: scale(.88);
-    animation-name: logo;
     animation-timing-function: var(--ease-spring);
     filter: drop-shadow(0 6px 14px rgba(240,160,32,.22));
   }
@@ -82,6 +79,23 @@
     letter-spacing: .01em;
   }
 
+  /* Barra de carga: refleja el progreso real de la app */
+  .bar {
+    margin-top: 26px;
+    width: 220px; height: 4px;
+    border-radius: 2px;
+    background: var(--track);
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; width: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: transform var(--bar) var(--ease-out);
+  }
+
   .footer {
     position: absolute; left: 24px; right: 24px; bottom: 20px;
     display: flex; justify-content: space-between; align-items: baseline;
@@ -89,40 +103,20 @@
   }
   .version { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
-  /* Indicador de carga indeterminado en el borde inferior */
-  .progress {
-    position: absolute; left: 1px; right: 1px; bottom: 1px;
-    height: 2px; overflow: hidden;
-    background: var(--track);
-  }
-  .progress::after {
-    content: "";
-    position: absolute; top: 0; bottom: 0; left: 0;
-    width: 32%;
-    background: linear-gradient(90deg, transparent, var(--accent) 40%, var(--accent) 60%, transparent);
-    transform: translateX(-100%);
-    animation: sweep 1.25s linear 300ms infinite;
-  }
-
   @keyframes enter { to { opacity: 1; transform: none; } }
-  @keyframes logo  { to { opacity: 1; transform: none; } }
-  @keyframes sweep { to { transform: translateX(320%); } }
+  @keyframes fade  { to { opacity: 1; } }
 
-  /* Movimiento reducido: solo fundidos */
-  :root.calm .enter, :root.calm .logo { transform: none; animation-name: fade; animation-timing-function: ease-out; }
-  :root.calm .frame.out { transform: none; }
-  :root.calm .progress::after { animation: none; width: 100%; transform: none; opacity: .5; }
-  @keyframes fade { to { opacity: 1; } }
-
+  /* Movimiento reducido: la entrada es solo un fundido; la barra sigue avanzando porque informa */
+  :root.calm .enter { transform: none; animation-name: fade; animation-timing-function: ease-out; }
+  :root.calm { --bar: 220ms; }
   @media (prefers-reduced-motion: reduce) {
-    .enter, .logo { transform: none; animation-name: fade; }
-    .frame.out { transform: none; }
-    .progress::after { animation: none; width: 100%; transform: none; opacity: .5; }
+    .enter { transform: none; animation-name: fade; }
+    :root { --bar: 220ms; }
   }
 </style>
 </head>
 <body>
-<main class="frame" id="frame" role="status" aria-live="polite" aria-busy="true">
+<main class="frame" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="frame">
   <svg class="logo enter" style="--i:0" viewBox="0 0 64 64" aria-hidden="true">
     <defs>
       <linearGradient id="g" x1="0" y1="0" x2=".45" y2="1">
@@ -136,12 +130,12 @@
   </svg>
   <h1 class="name enter" style="--i:1">Pliego</h1>
   <p class="sub enter" id="sub" style="--i:2">Editor de PDF</p>
+  <div class="bar enter" style="--i:3"><div class="bar-fill" id="fill"></div></div>
 
-  <div class="footer enter" style="--i:3">
-    <span id="status">Preparando el editor…</span>
+  <div class="footer enter" style="--i:4">
+    <span id="status">Iniciando…</span>
     <span class="version" id="ver"></span>
   </div>
-  <div class="progress" aria-hidden="true"></div>
 </main>
 
 <script>
@@ -154,37 +148,62 @@
   var theme = "dark", lang = "es";
   try { theme = localStorage.getItem("pliego_theme") || "dark"; } catch (_) {}
   try { lang  = localStorage.getItem("pliego_lang")  || "es";   } catch (_) {}
+  if (lang !== "en") lang = "es";
 
   if (theme === "light") root.classList.add("light");
   if (quiet) root.classList.add("calm");
 
   var copy = {
-    es: { sub: "Editor de PDF", status: "Preparando el editor…" },
-    en: { sub: "PDF editor",    status: "Getting things ready…" }
-  }[lang] || null;
-  if (copy) {
-    root.lang = lang;
-    document.getElementById("sub").textContent    = copy.sub;
-    document.getElementById("status").textContent = copy.status;
-  }
+    es: { sub: "Editor de PDF", start: "Iniciando…", loading: "Cargando el editor…", tools: "Preparando herramientas…", done: "Listo" },
+    en: { sub: "PDF editor",    start: "Starting…",  loading: "Loading the editor…", tools: "Preparing tools…",        done: "Ready" }
+  }[lang];
+  root.lang = lang;
+  document.getElementById("sub").textContent = copy.sub;
+  document.getElementById("status").textContent = copy.start;
   if (ver) document.getElementById("ver").textContent = "v" + ver;
 
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      if (window.splashBridge) window.splashBridge.ready();
-    });
-  });
+  var frame  = document.getElementById("frame");
+  var fill   = document.getElementById("fill");
+  var status = document.getElementById("status");
+  var target = 0, shown = 0, finished = false;
 
-  // Tiempo mínimo en pantalla; el main decide cuándo desvanecer (cuando la app ya está lista)
-  var holdMs = quiet ? 1400 : 2200;
-  setTimeout(function () {
-    if (window.splashBridge) window.splashBridge.done();
-  }, holdMs);
-  if (window.splashBridge && window.splashBridge.onFade) {
-    window.splashBridge.onFade(function () {
-      document.getElementById("frame").classList.add("out");
+  function paint() {
+    fill.style.transform = "scaleX(" + shown.toFixed(3) + ")";
+    frame.setAttribute("aria-valuenow", Math.round(shown * 100));
+  }
+
+  // Avance lento entre etapas para que la barra no se quede quieta
+  var creep = setInterval(function () {
+    if (finished) return;
+    var cap = Math.min(0.94, target + 0.1);
+    if (shown < cap) { shown = Math.min(cap, shown + 0.012); paint(); }
+  }, 120);
+
+  var bridge = window.splashBridge;
+  if (bridge) {
+    bridge.onProgress(function (d) {
+      if (finished || d.p <= target) return;
+      target = d.p;
+      if (shown < target) shown = target;
+      if (copy[d.stage]) status.textContent = copy[d.stage];
+      paint();
+    });
+    bridge.onFinish(function () {
+      finished = true;
+      clearInterval(creep);
+      shown = 1;
+      status.textContent = copy.done;
+      // El último tramo siempre se ve subir, también con animaciones reducidas
+      fill.style.transitionDuration = "450ms";
+      paint();
+      setTimeout(function () { bridge.done(); }, 450 + 200);
     });
   }
+
+  // Avisar al main en cuanto el primer frame esté pintado
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { if (bridge) bridge.ready(); });
+  });
 })();
 </script>
 </body>

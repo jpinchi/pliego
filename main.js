@@ -11,9 +11,15 @@ if (!gotLock) { app.quit(); }
 
 let win;
 let splash;
-let mainReady  = false;   // la ventana principal terminó de cargar
-let splashDone = false;   // el video terminó de reproducirse
-let splashShown = false;  // la ventana splash ya se mostró
+let wantMaximized = false;  // la ventana se guardó maximizada; se aplica al mostrarla
+let mainReady   = false;    // la ventana principal terminó de cargar
+let mainShown   = false;
+let splashShown = false;
+let splashShownAt = 0;
+let finishRequested = false;
+let progress = 0;
+let progressStage = "start";
+const SPLASH_MIN_VISIBLE_MS = 900;
 
 // ── Registro de inicio ────────────────────────────────────────────────────────
 const logDir  = path.join(app.getPath("userData"), "logs");
@@ -72,25 +78,52 @@ function useQuietSplash() {
 
 // ── Mostrar ventana principal ─────────────────────────────────────────────────
 function showMain() {
-  if (win && !win.isDestroyed()) {
-    win.show();
-    win.focus();
-  }
+  if (mainShown || !win || win.isDestroyed()) return;
+  mainShown = true;
+  // maximize() muestra la ventana, por eso solo se llama aquí y no al crearla
+  if (wantMaximized) win.maximize();
+  win.show();
+  win.focus();
 }
 
-let finished = false;
-function tryFinish() {
-  if (finished || !mainReady || !splashDone) return;
-  finished = true;
-  logLine(`splash terminó OK — ${Date.now() - t0}ms desde inicio`);
+// Muestra la app y desvanece el splash encima (solo al final, con la barra completa)
+function finishStartup(reason) {
+  if (mainShown) return;
+  logLine(`inicio completo (${reason}) — ${Date.now() - t0}ms desde inicio`);
   showMain();
   const s = splash;
   splash = null;
-  if (s && !s.isDestroyed()) {
-    // El splash se desvanece encima de la app ya visible y luego se cierra
-    s.webContents.send("splash:fade");
-    setTimeout(() => { if (!s.isDestroyed()) s.close(); }, 280);
+  if (!s || s.isDestroyed()) return;
+  let opacity = 1;
+  const fade = setInterval(() => {
+    if (s.isDestroyed()) return clearInterval(fade);
+    opacity -= 0.2;
+    if (opacity <= 0) { clearInterval(fade); s.close(); }
+    else s.setOpacity(opacity);
+  }, 30);
+}
+
+function setProgress(p, stage) {
+  if (p <= progress) return;
+  progress = p;
+  progressStage = stage;
+  if (splashShown && splash && !splash.isDestroyed()) {
+    splash.webContents.send("splash:progress", { p, stage });
   }
+}
+
+// La app ya cargó: el splash completa la barra y avisa con splash:done
+function maybeFinish() {
+  if (finishRequested || mainShown || !mainReady) return;
+  if (!splash) return finishStartup("sin splash");
+  if (!splashShown) return;
+  finishRequested = true;
+  const wait = Math.max(0, SPLASH_MIN_VISIBLE_MS - (Date.now() - splashShownAt));
+  setTimeout(() => {
+    if (splash && !splash.isDestroyed()) splash.webContents.send("splash:finish");
+    else finishStartup("splash cerrado");
+  }, wait);
+  setTimeout(() => finishStartup("el splash no respondió"), wait + 2500);
 }
 
 // ── Splash ────────────────────────────────────────────────────────────────────
@@ -98,7 +131,6 @@ function createSplash() {
   const skipReason = shouldSkipSplash();
   if (skipReason) {
     logLine(`splash omitido: ${skipReason}`);
-    splashDone = true;
     return;
   }
 
@@ -137,44 +169,25 @@ function createSplash() {
     { query: { quiet: quiet ? "1" : "0", v: app.getVersion() } }
   );
 
-  // La animación CSS está lista → mostrar la ventana
+  // El splash ya pintó su primer frame → mostrarlo con el progreso que haya hasta ahora
   ipcMain.once("splash:ready", () => {
     logLine(`splash:ready — ${Date.now() - t0}ms`);
-    if (splash && !splash.isDestroyed()) {
-      splash.showInactive();
-      splashShown = true;
-    }
-    // Si la ventana principal ya cargó mientras esperábamos, esperar el resto de la animación
-    if (mainReady) {
-      setTimeout(() => { splashDone = true; tryFinish(); }, 2200);
-    }
+    if (mainShown || !splash || splash.isDestroyed()) return;
+    splash.showInactive();
+    splashShown = true;
+    splashShownAt = Date.now();
+    splash.webContents.send("splash:progress", { p: Math.max(progress, 0.1), stage: progressStage });
+    maybeFinish();
   });
 
-  // El video terminó → cerrar splash y mostrar app
+  // Barra al 100 % → mostrar la app
   ipcMain.once("splash:done", () => {
     logLine(`splash:done — ${Date.now() - t0}ms`);
-    splashDone = true;
-    tryFinish();
+    finishStartup("barra completa");
   });
 
-  // Topes de seguridad
-  // 6 s: si no se mostró todavía, dar por perdido
-  setTimeout(() => {
-    if (!splashShown) {
-      logLine("splash:timeout-6s — no mostrado, continuando");
-      splashDone = true;
-      tryFinish();
-    }
-  }, 6000);
-
-  // 12 s: tope absoluto
-  setTimeout(() => {
-    if (!splashDone) {
-      logLine("splash:timeout-12s — tope absoluto");
-      splashDone = true;
-      tryFinish();
-    }
-  }, 12000);
+  // Tope absoluto por si algo se queda colgado
+  setTimeout(() => finishStartup("tope de 15 s"), 15000);
 }
 
 // ── Ventana principal ─────────────────────────────────────────────────────────
@@ -201,15 +214,22 @@ function createWindow() {
     },
   });
 
-  if (state.maximized) win.maximize();
+  wantMaximized = !!state.maximized;
   win.on("close", saveWindowState);
+  win.webContents.once("did-start-loading", () => setProgress(0.3, "loading"));
+  win.webContents.once("dom-ready",         () => setProgress(0.65, "tools"));
   win.loadFile(path.join(__dirname, "renderer", "pliego-pdf.html"));
 
   win.webContents.once("did-finish-load", () => {
     logLine(`main:did-finish-load — ${Date.now() - t0}ms`);
     mainReady = true;
+    setProgress(0.9, "tools");
     ipcMain.emit("main:ready");
-    tryFinish();
+    maybeFinish();
+    // Si el splash aún no aparece, no tiene sentido retrasar la app esperándolo
+    if (splash && !splashShown) {
+      setTimeout(() => { if (!splashShown) finishStartup("el splash no apareció a tiempo"); }, 1000);
+    }
   });
 
   ipcMain.on("win:minimize",       () => win.minimize());
@@ -247,6 +267,20 @@ function createWindow() {
 }
 
 // ── Auto-actualización ────────────────────────────────────────────────────────
+// Estados: idle | checking | none | available | downloading | downloaded | error
+let updateState = { state: "idle" };
+function sendUpdate(s) {
+  updateState = s;
+  if (win && !win.isDestroyed()) win.webContents.send("update:status", s);
+}
+const UPDATE_BUSY = ["checking", "available", "downloading", "downloaded"];
+
+function checkForUpdates() {
+  if (UPDATE_BUSY.includes(updateState.state)) return;
+  // Los fallos llegan por el evento "error"
+  autoUpdater.checkForUpdates().catch(() => {});
+}
+
 function setupAutoUpdater() {
   // No verificar actualizaciones en desarrollo (npm start sin empaquetar)
   if (!app.isPackaged) return;
@@ -256,38 +290,53 @@ function setupAutoUpdater() {
 
   autoUpdater.on("checking-for-update", () => {
     logLine(`update: buscando (versión actual v${app.getVersion()})`);
+    sendUpdate({ state: "checking" });
   });
 
   autoUpdater.on("update-not-available", (info) => {
     logLine(`update: sin actualizaciones — la última publicada es v${info.version}`);
+    sendUpdate({ state: "none", version: info.version });
   });
 
   autoUpdater.on("update-available", (info) => {
     logLine(`update disponible: v${info.version}`);
-    if (win && !win.isDestroyed()) {
-      win.webContents.send("update:available", { version: info.version });
-    }
+    sendUpdate({ state: "available", version: info.version });
+  });
+
+  autoUpdater.on("download-progress", (p) => {
+    const percent = Math.round(p.percent);
+    if (updateState.state === "downloading" && updateState.percent === percent) return;
+    sendUpdate({ state: "downloading", version: updateState.version, percent });
   });
 
   autoUpdater.on("update-downloaded", (info) => {
     logLine(`update descargado: v${info.version}`);
-    if (win && !win.isDestroyed()) {
-      win.webContents.send("update:downloaded", { version: info.version });
-    }
+    sendUpdate({ state: "downloaded", version: info.version });
   });
 
   autoUpdater.on("error", (err) => {
     logLine(`update error: ${err.message}`);
+    sendUpdate({ state: "error" });
   });
 
   // Verificar 5 segundos después de que la ventana principal esté lista
-  ipcMain.once("main:ready", () => {
-    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 5000);
-  });
+  ipcMain.once("main:ready", () => setTimeout(checkForUpdates, 5000));
 }
+
+ipcMain.handle("update:getState", () => ({ ...updateState, current: app.getVersion(), packaged: app.isPackaged }));
+
+// "Buscar actualizaciones" desde Ajustes
+ipcMain.handle("update:check", () => {
+  if (!app.isPackaged) return { state: "dev" };
+  if (UPDATE_BUSY.includes(updateState.state)) return updateState;
+  logLine("update: búsqueda manual desde Ajustes");
+  checkForUpdates();
+  return { state: "checking" };
+});
 
 // Instalar actualización descargada (el renderer lo pide)
 ipcMain.handle("update:install", () => {
+  if (updateState.state !== "downloaded") return false;
   // Silencioso: el instalador es tipo asistente (oneClick:false) y si no abriría el asistente completo.
   // Segundo argumento: volver a abrir Pliego al terminar.
   logLine("update: instalando y reiniciando");
@@ -322,7 +371,8 @@ ipcMain.handle("file:readByPath", async (_, filePath) => {
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  logLine(`app:ready — plataforma ${process.platform}, v${app.getVersion()}, proceso vivo hace ${Math.round(process.uptime() * 1000)}ms`);  setupAutoUpdater();
+  logLine(`app:ready — plataforma ${process.platform}, v${app.getVersion()}, proceso vivo hace ${Math.round(process.uptime() * 1000)}ms`);
+  setupAutoUpdater();
   createSplash();
   createWindow();
   app.on("activate", () => {
