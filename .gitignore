@@ -1,9 +1,11 @@
 # Dependencias
 node_modules/
+splash-src/node_modules/
 
-# Salida del empaquetador
+# Salida del empaquetador y renders de Remotion
 dist/
 out/
+splash-src/out/
 
 # Estado de ventana y preferencias del usuario (generados en runtime)
 # No pertenecen al repo; cada instalación crea los suyos
