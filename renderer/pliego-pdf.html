@@ -354,6 +354,19 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast.err{border-color:var(--danger);color:#ffb3ad}
   .toast.ok{border-color:var(--ok);color:#9ef0c8}
+  .toast.actionable{pointer-events:auto;display:flex;align-items:center;gap:12px}
+  .toast-btn{padding:4px 12px;border-radius:6px;border:none;background:var(--accent);color:#1a1206;
+    font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .toast-btn:hover{filter:brightness(1.08)}
+  .toast-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  /* Ajustes → Actualizaciones */
+  .update-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .update-version{font-family:var(--mono);font-size:12px;color:var(--muted);margin-right:auto}
+  .update-row .btn:disabled{opacity:.55;cursor:default}
+  .update-row .btn[hidden], .update-box[hidden]{display:none}
+  .update-status{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px}
+  .update-status.err{color:var(--danger)}
 
   .busy{position:fixed;inset:0;background:rgba(8,10,14,.6);display:none;align-items:center;
     justify-content:center;z-index:70;color:var(--ink);font-weight:600;gap:12px;flex-direction:column}
@@ -603,6 +616,15 @@
       <input type="checkbox" id="settingsAutoTour" style="width:auto;flex:0 0 auto">
       <span data-i18n="settingsAutoTourLabel" style="font-size:13px">Mostrar el tour guiado al iniciar Pliego</span>
     </label>
+
+    <div class="field update-box"><label data-i18n="settingsUpdatesLabel">Actualizaciones</label>
+      <div class="update-row">
+        <span class="update-version" id="settingsUpdateVersion"></span>
+        <button class="btn" id="settingsCheckUpdates" data-i18n="settingsCheckUpdates">Buscar actualizaciones</button>
+        <button class="btn primary" id="settingsInstallUpdate" data-i18n="updateRestart" hidden>Reiniciar</button>
+      </div>
+      <div class="update-status" id="settingsUpdateStatus" role="status" aria-live="polite"></div>
+    </div>
 
     <div class="modal-actions">
       <button class="btn primary" id="settingsClose" data-i18n="btnClose">Cerrar</button>
@@ -889,6 +911,17 @@ const I18N = {
     settingsZoom100: "100%",
     settingsColorLabel: "Color de tinta por defecto",
     settingsAutoTourLabel: "Mostrar el tour guiado al iniciar Pliego",
+    settingsUpdatesLabel: "Actualizaciones",
+    settingsCheckUpdates: "Buscar actualizaciones",
+    updateCurrentVersion: "Versión instalada: v{v}",
+    updateChecking: "Buscando actualizaciones…",
+    updateNone: "Tienes la última versión.",
+    updateAvailable: "Nueva versión v{v} disponible. Descargando…",
+    updateDownloading: "Descargando v{v}… {p} %",
+    updateReady: "La versión v{v} está lista para instalar.",
+    updateRestart: "Reiniciar",
+    updateError: "No se pudo buscar actualizaciones. Revisa tu conexión e inténtalo de nuevo.",
+    updateDev: "Las actualizaciones solo funcionan en la app instalada.",
     btnClose: "Cerrar",
     // Tour guiado (onboarding)
     titleHelp: "Ayuda / Tour",
@@ -1155,6 +1188,17 @@ const I18N = {
     settingsZoom100: "100%",
     settingsColorLabel: "Default ink color",
     settingsAutoTourLabel: "Show the guided tour on startup",
+    settingsUpdatesLabel: "Updates",
+    settingsCheckUpdates: "Check for updates",
+    updateCurrentVersion: "Installed version: v{v}",
+    updateChecking: "Checking for updates…",
+    updateNone: "You're up to date.",
+    updateAvailable: "New version v{v} available. Downloading…",
+    updateDownloading: "Downloading v{v}… {p}%",
+    updateReady: "Version v{v} is ready to install.",
+    updateRestart: "Restart",
+    updateError: "Couldn't check for updates. Check your connection and try again.",
+    updateDev: "Updates only work in the installed app.",
     btnClose: "Close",
     // Guided tour (onboarding)
     titleHelp: "Help / Tour",
@@ -1217,6 +1261,7 @@ function setLang(lang){
   currentLang = lang;
   try{ localStorage.setItem("pliego_lang", lang); }catch(_){}
   applyI18n();
+  renderUpdateSettings();
   buildRail();
   // Vuelve a pintar el panel contextual activo para que se traduzca también
   const tool = TOOLBOX.find(x=>x!=="divider" && x.id===activeTool);
@@ -3923,6 +3968,7 @@ function applyTheme(theme){
 applyTheme(getTheme());   // aplica el tema guardado tan pronto carga el script (antes de pintar la UI)
 function openSettings(){
   const m=$("#settingsModal");
+  renderUpdateSettings();
   $("#settingsLang").value=currentLang;
   $("#settingsTheme").value=getTheme();
   $("#settingsZoom").value=getDefaultZoomMode();
@@ -3961,16 +4007,50 @@ $("#settingsTheme").onchange=e=>applyTheme(e.target.value);
 $("#settingsZoom").onchange=e=>{ try{ localStorage.setItem("pliego_default_zoom", e.target.value); }catch(_){} };
 $("#settingsAutoTour").onchange=e=>{ try{ localStorage.setItem("pliego_auto_tour", e.target.checked?"1":"0"); }catch(_){} };
 
-// Auto-actualización
+// Auto-actualización: avisos en la app y sección de Ajustes
+var updState={state:"idle"}, updCurrent="";
+function updText(key,s){ return t(key).replace("{v}",(s&&s.version)||"").replace("{p}",(s&&s.percent!=null)?s.percent:""); }
+function renderUpdateSettings(){
+  const st=$("#settingsUpdateStatus"); if(!st || !updState) return;
+  $("#settingsUpdateVersion").textContent = updCurrent ? t("updateCurrentVersion").replace("{v}",updCurrent) : "";
+  const keys={checking:"updateChecking",none:"updateNone",available:"updateAvailable",downloading:"updateDownloading",
+              downloaded:"updateReady",error:"updateError",dev:"updateDev"};
+  st.textContent = keys[updState.state] ? updText(keys[updState.state],updState) : "";
+  st.classList.toggle("err", updState.state==="error");
+  $("#settingsCheckUpdates").disabled = ["checking","available","downloading","downloaded"].includes(updState.state);
+  $("#settingsInstallUpdate").hidden = updState.state!=="downloaded";
+}
+function showUpdateReadyToast(s){
+  const el=$("#toast"); clearTimeout(el._t);
+  el.textContent="";
+  const msg=document.createElement("span"); msg.textContent=updText("updateReady",s);
+  const btn=document.createElement("button"); btn.className="toast-btn"; btn.textContent=t("updateRestart");
+  btn.onclick=()=>window.pliegoUpdate.install();
+  el.append(msg,btn);
+  el.className="toast show ok actionable";
+}
 if(window.pliegoUpdate){
-  window.pliegoUpdate.onAvailable(info=>{
-    toast(`Nueva versión v${info.version} disponible. Descargando…`,"ok");
+  window.pliegoUpdate.onStatus(s=>{
+    const prev=updState.state; updState=s; renderUpdateSettings();
+    if(s.state==="available" && prev!=="available") toast(updText("updateAvailable",s),"ok");
+    if(s.state==="downloaded" && prev!=="downloaded") showUpdateReadyToast(s);
   });
-  window.pliegoUpdate.onDownloaded(info=>{
-    // Toast persistente con botón para instalar
-    const t=$("#toast");
-    t.innerHTML=`v${info.version} lista. <button onclick="window.pliegoUpdate.install()" style="margin-left:8px;padding:2px 10px;border-radius:6px;border:none;background:var(--accent,#f0a020);color:#0d1018;font-weight:700;cursor:pointer;font-size:11px">Reiniciar</button>`;
-    t.className="toast show ok";
-  });
+  window.pliegoUpdate.getState().then(s=>{
+    updCurrent=s.current||"";
+    if(s.state && s.state!=="idle") updState=s;
+    renderUpdateSettings();
+  }).catch(()=>{});
+  $("#settingsCheckUpdates").onclick=async()=>{
+    const before=updState;
+    try{
+      const s=await window.pliegoUpdate.check();
+      // Si ya llegó un evento de estado mientras esperábamos, ese manda
+      if(updState===before) updState=s;
+    }catch(_){ updState={state:"error"}; }
+    renderUpdateSettings();
+  };
+  $("#settingsInstallUpdate").onclick=()=>window.pliegoUpdate.install();
+}else{
+  const box=document.querySelector(".update-box"); if(box) box.hidden=true;
 }
 </script>
