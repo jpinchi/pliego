@@ -16,7 +16,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 - Splash screen: reemplazado video VP9+yuva420p por animación CSS pura
 - Splash window: eliminado `transparent:true` → desaparece el flash negro en Windows (DWM bug)
 - Splash window: `backgroundColor:'#0d1018'` — ventana sólida sin parpadeo al crear
-- Modo quiet splash: 1.8s total, full: 2.5s — controlado por CSS custom property
+- Splash definitivo: diseño plano con los tokens de la app, sigue el tema claro/oscuro y el idioma ES/EN, indicador de carga indeterminado, respeta "reducir animaciones"
+- El splash se desvanece cuando la app ya está visible (antes quedaba un rectángulo vacío)
+- Eliminados los videos `.webm` y `splash-player.js`, que ya no se usaban
 
 ### Corregido
 - Pantalla completa negra al abrir la app en Windows (DWM compositor bug con `transparent:true`)

@@ -6,258 +6,185 @@
   content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
 <title>Pliego</title>
 <style>
+  /* Tokens idénticos a pliego-pdf.html ("drafting studio" acero + ámbar) */
+  :root {
+    --bg:     #20242c;
+    --line:   #363c47;
+    --ink:    #e7e9ee;
+    --muted:  #8a909e;
+    --track:  rgba(255,255,255,.06);
+    --accent: #f0a020;
+    --accent-2: #c97f12;
+    --ui:   "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    --ease-out:    cubic-bezier(.16, 1, .3, 1);
+    --ease-spring: cubic-bezier(.34, 1.36, .64, 1);
+    --ease-in:     cubic-bezier(.4, 0, 1, 1);
+    --enter: 420ms;
+    --exit:  260ms;
+  }
+  :root.light {
+    --bg:     #ffffff;
+    --line:   #d6dae1;
+    --ink:    #1c2128;
+    --muted:  #5b6270;
+    --track:  rgba(0,0,0,.06);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html, body {
     width: 100%; height: 100%;
-    background: #080b10;
     overflow: hidden;
-    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--ui);
     -webkit-font-smoothing: antialiased;
     user-select: none;
+    cursor: default;
   }
 
-  /* Patrón de puntos sutil en el fondo */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 20px 20px;
-    pointer-events: none;
+  .frame {
+    position: absolute; inset: 0;
+    box-shadow: inset 0 0 0 1px var(--line);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity var(--exit) var(--ease-in), transform var(--exit) var(--ease-in);
   }
+  .frame.out { opacity: 0; transform: scale(.985); }
 
-  /* Resplandor ambar de fondo */
-  body::after {
-    content: '';
-    position: fixed;
-    width: 300px; height: 200px;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(ellipse, rgba(240,160,32,0.08) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  /* Tarjeta principal */
-  .card {
-    position: absolute;
-    inset: 16px;
-    background: linear-gradient(145deg, #151b26 0%, #0f1319 60%, #0c1018 100%);
-    border-radius: 22px;
-    border: 1px solid rgba(255,255,255,0.07);
-    box-shadow:
-      0 0 0 1px rgba(0,0,0,0.6),
-      0 2px 4px rgba(0,0,0,0.4),
-      0 8px 32px rgba(0,0,0,0.5),
-      0 32px 64px rgba(0,0,0,0.4),
-      inset 0 1px 0 rgba(255,255,255,0.05);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+  .enter {
     opacity: 0;
-    transform: scale(0.94) translateY(8px);
-    animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
-  }
-
-  /* Línea decorativa superior */
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 50%; transform: translateX(-50%);
-    width: 80px; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(240,160,32,0.5), transparent);
-    border-radius: 1px;
-    opacity: 0;
-    animation: lineIn 0.6s ease 0.4s forwards;
-  }
-
-  /* Contenedor logo con halo */
-  .logo-wrap {
-    position: relative;
-    margin-bottom: 22px;
-    opacity: 0;
-    transform: scale(0.7) translateY(4px);
-    animation: logoIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.22s forwards;
-  }
-
-  /* Halo exterior */
-  .logo-wrap::before {
-    content: '';
-    position: absolute;
-    inset: -8px;
-    border-radius: 28px;
-    background: radial-gradient(ellipse at center, rgba(240,160,32,0.18) 0%, transparent 70%);
-    animation: haloPulse 2.5s ease-in-out 0.7s infinite;
-  }
-
-  /* Anillo fino */
-  .logo-wrap::after {
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: 24px;
-    border: 1px solid rgba(240,160,32,0.2);
+    transform: translateY(8px);
+    animation: enter var(--enter) var(--ease-out) forwards;
+    animation-delay: calc(80ms + var(--i, 0) * 50ms);
   }
 
   .logo {
-    width: 76px; height: 76px;
-    background: linear-gradient(145deg, #f5b030 0%, #e89010 50%, #d07808 100%);
-    border-radius: 20px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 40px; font-weight: 800; color: #0d1018;
-    letter-spacing: -2px;
-    position: relative;
-    box-shadow:
-      0 0 0 1px rgba(240,160,32,0.3),
-      0 4px 12px rgba(240,160,32,0.4),
-      0 8px 32px rgba(240,160,32,0.25),
-      inset 0 1px 0 rgba(255,255,255,0.25),
-      inset 0 -2px 0 rgba(0,0,0,0.2);
+    width: 64px; height: 64px;
+    margin-bottom: 20px;
+    transform: scale(.88);
+    animation-name: logo;
+    animation-timing-function: var(--ease-spring);
+    filter: drop-shadow(0 6px 14px rgba(240,160,32,.22));
   }
 
-  /* Brillo interno del logo */
-  .logo::after {
-    content: '';
-    position: absolute;
-    top: 4px; left: 6px; right: 6px;
-    height: 30%;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent);
-    border-radius: 8px 8px 50% 50%;
+  .name {
+    font-size: 30px; font-weight: 650;
+    letter-spacing: -.02em; line-height: 1.1;
   }
 
-  .app-name {
-    font-size: 26px; font-weight: 700;
-    color: #eef0f5;
-    letter-spacing: -0.8px;
-    line-height: 1;
-    opacity: 0;
-    transform: translateY(10px);
-    animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.36s forwards;
-    margin-bottom: 6px;
+  .sub {
+    margin-top: 6px;
+    font-size: 13px; font-weight: 500;
+    color: var(--muted);
+    letter-spacing: .01em;
   }
 
-  .app-sub {
-    font-size: 10.5px; font-weight: 500;
-    color: rgba(255,255,255,0.25);
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    opacity: 0;
-    transform: translateY(8px);
-    animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.46s forwards;
-    margin-bottom: 32px;
+  .footer {
+    position: absolute; left: 24px; right: 24px; bottom: 20px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; color: var(--muted);
+  }
+  .version { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* Indicador de carga indeterminado en el borde inferior */
+  .progress {
+    position: absolute; left: 1px; right: 1px; bottom: 1px;
+    height: 2px; overflow: hidden;
+    background: var(--track);
+  }
+  .progress::after {
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 0;
+    width: 32%;
+    background: linear-gradient(90deg, transparent, var(--accent) 40%, var(--accent) 60%, transparent);
+    transform: translateX(-100%);
+    animation: sweep 1.25s linear 300ms infinite;
   }
 
-  /* Barra de progreso */
-  .bar-wrap {
-    width: 160px;
-    opacity: 0;
-    transform: translateY(6px);
-    animation: fadeUp 0.4s ease 0.56s forwards;
-  }
+  @keyframes enter { to { opacity: 1; transform: none; } }
+  @keyframes logo  { to { opacity: 1; transform: none; } }
+  @keyframes sweep { to { transform: translateX(320%); } }
 
-  .bar-track {
-    height: 2px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 2px;
-    overflow: hidden;
-    position: relative;
-  }
+  /* Movimiento reducido: solo fundidos */
+  :root.calm .enter, :root.calm .logo { transform: none; animation-name: fade; animation-timing-function: ease-out; }
+  :root.calm .frame.out { transform: none; }
+  :root.calm .progress::after { animation: none; width: 100%; transform: none; opacity: .5; }
+  @keyframes fade { to { opacity: 1; } }
 
-  .bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    width: 0%;
-    background: linear-gradient(90deg, #c07010, #f0a020, #f5c040);
-    box-shadow: 0 0 8px rgba(240,160,32,0.6);
-    animation: progress var(--dur, 1.9s) cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.65s forwards;
-  }
-
-  /* Versión */
-  .version {
-    position: absolute;
-    bottom: 18px;
-    right: 22px;
-    font-size: 9.5px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.13);
-    letter-spacing: 0.5px;
-    font-variant-numeric: tabular-nums;
-    opacity: 0;
-    animation: fadeUp 0.4s ease 0.7s forwards;
-  }
-
-  /* ── Keyframes ── */
-  @keyframes cardIn {
-    to { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  @keyframes lineIn {
-    to { opacity: 1; }
-  }
-  @keyframes logoIn {
-    to { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  @keyframes fadeUp {
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes progress {
-    0%   { width: 0%; }
-    40%  { width: 55%; }
-    70%  { width: 80%; }
-    90%  { width: 94%; }
-    100% { width: 100%; }
-  }
-  @keyframes haloPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.5; transform: scale(1.08); }
-  }
-
-  /* Fade-out de salida */
-  .card.out {
-    animation: cardOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards !important;
-  }
-  @keyframes cardOut {
-    to { opacity: 0; transform: scale(0.96) translateY(-6px); }
+  @media (prefers-reduced-motion: reduce) {
+    .enter, .logo { transform: none; animation-name: fade; }
+    .frame.out { transform: none; }
+    .progress::after { animation: none; width: 100%; transform: none; opacity: .5; }
   }
 </style>
 </head>
 <body>
-<div class="card" id="card">
-  <div class="logo-wrap">
-    <div class="logo">P</div>
+<main class="frame" id="frame" role="status" aria-live="polite" aria-busy="true">
+  <svg class="logo enter" style="--i:0" viewBox="0 0 64 64" aria-hidden="true">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2=".45" y2="1">
+        <stop offset="0" stop-color="#f2a524"/>
+        <stop offset="1" stop-color="#c97f12"/>
+      </linearGradient>
+    </defs>
+    <rect width="64" height="64" rx="15" fill="url(#g)"/>
+    <rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="rgba(255,255,255,.18)"/>
+    <path fill="#1a1206" d="M21.1 16.3h12.6c8.4 0 13.2 4.3 13.2 11.5s-4.8 11.4-13.2 11.4h-5.3v8.6h-7.3V16.3zm7.3 6.1v10.8h4.9c3.8 0 5.9-1.9 5.9-5.4s-2.1-5.4-5.9-5.4h-4.9z"/>
+  </svg>
+  <h1 class="name enter" style="--i:1">Pliego</h1>
+  <p class="sub enter" id="sub" style="--i:2">Editor de PDF</p>
+
+  <div class="footer enter" style="--i:3">
+    <span id="status">Preparando el editor…</span>
+    <span class="version" id="ver"></span>
   </div>
-  <div class="app-name">Pliego</div>
-  <div class="app-sub">PDF Editor</div>
-  <div class="bar-wrap">
-    <div class="bar-track">
-      <div class="bar-fill"></div>
-    </div>
-  </div>
-  <div class="version" id="ver"></div>
-</div>
+  <div class="progress" aria-hidden="true"></div>
+</main>
 
 <script>
 (function () {
-  var quiet = new URLSearchParams(location.search).get("quiet") === "1";
-  var ver   = new URLSearchParams(location.search).get("v") || "";
-  var card  = document.getElementById("card");
+  var root   = document.documentElement;
+  var params = new URLSearchParams(location.search);
+  var quiet  = params.get("quiet") === "1";
+  var ver    = params.get("v") || "";
 
+  var theme = "dark", lang = "es";
+  try { theme = localStorage.getItem("pliego_theme") || "dark"; } catch (_) {}
+  try { lang  = localStorage.getItem("pliego_lang")  || "es";   } catch (_) {}
+
+  if (theme === "light") root.classList.add("light");
+  if (quiet) root.classList.add("calm");
+
+  var copy = {
+    es: { sub: "Editor de PDF", status: "Preparando el editor…" },
+    en: { sub: "PDF editor",    status: "Getting things ready…" }
+  }[lang] || null;
+  if (copy) {
+    root.lang = lang;
+    document.getElementById("sub").textContent    = copy.sub;
+    document.getElementById("status").textContent = copy.status;
+  }
   if (ver) document.getElementById("ver").textContent = "v" + ver;
-  card.style.setProperty("--dur", quiet ? "1.1s" : "1.9s");
 
-  // Avisar al main: DOM listo, mostrar ventana
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
       if (window.splashBridge) window.splashBridge.ready();
     });
   });
 
-  var totalMs = quiet ? 1700 : 2600;
+  // Tiempo mínimo en pantalla; el main decide cuándo desvanecer (cuando la app ya está lista)
+  var holdMs = quiet ? 1400 : 2200;
   setTimeout(function () {
-    card.classList.add("out");
-    setTimeout(function () {
-      if (window.splashBridge) window.splashBridge.done();
-    }, 300);
-  }, totalMs);
+    if (window.splashBridge) window.splashBridge.done();
+  }, holdMs);
+  if (window.splashBridge && window.splashBridge.onFade) {
+    window.splashBridge.onFade(function () {
+      document.getElementById("frame").classList.add("out");
+    });
+  }
 })();
 </script>
 </body>

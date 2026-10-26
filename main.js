@@ -4,8 +4,6 @@ const path = require("path");
 const fs   = require("fs");
 const { autoUpdater } = require("electron-updater");
 
-// Decodificar video por software para evitar el "error de video 3" con ciertos drivers GPU
-app.commandLine.appendSwitch("disable-accelerated-video-decode");
 
 // Una sola instancia
 const gotLock = app.requestSingleInstanceLock();
@@ -80,14 +78,18 @@ function showMain() {
   }
 }
 
+let finished = false;
 function tryFinish() {
-  if (mainReady && splashDone) {
-    logLine(`splash terminó OK — ${Date.now() - t0}ms desde inicio`);
-    if (splash && !splash.isDestroyed()) {
-      splash.close();
-      splash = null;
-    }
-    showMain();
+  if (finished || !mainReady || !splashDone) return;
+  finished = true;
+  logLine(`splash terminó OK — ${Date.now() - t0}ms desde inicio`);
+  showMain();
+  const s = splash;
+  splash = null;
+  if (s && !s.isDestroyed()) {
+    // El splash se desvanece encima de la app ya visible y luego se cierra
+    s.webContents.send("splash:fade");
+    setTimeout(() => { if (!s.isDestroyed()) s.close(); }, 280);
   }
 }
 
@@ -108,7 +110,7 @@ function createSplash() {
     height: 320,
     frame:         false,
     transparent:   false,
-    backgroundColor: "#0d1018",
+    backgroundColor: "#20242c",
     focusable:     false,
     alwaysOnTop:   true,
     skipTaskbar:   true,
@@ -127,6 +129,9 @@ function createSplash() {
   });
 
   splash.setIgnoreMouseEvents(true);
+  const wc = splash.webContents;
+  wc.once("did-start-loading", () => logLine(`splash:start-loading — ${Date.now() - t0}ms`));
+  wc.once("dom-ready",         () => logLine(`splash:dom-ready — ${Date.now() - t0}ms`));
   splash.loadFile(
     path.join(__dirname, "renderer", "splash.html"),
     { query: { quiet: quiet ? "1" : "0", v: app.getVersion() } }
@@ -174,6 +179,7 @@ function createSplash() {
 
 // ── Ventana principal ─────────────────────────────────────────────────────────
 function createWindow() {
+  if (win && !win.isDestroyed()) return;
   const state = loadWindowState();
   win = new BrowserWindow({
     width:  state.width  || 1280,
@@ -305,9 +311,8 @@ ipcMain.handle("file:readByPath", async (_, filePath) => {
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  logLine(`app:ready — plataforma ${process.platform}, v${app.getVersion()}`);
-  setupAutoUpdater();
-  createSplash();   // se crea ANTES que la ventana principal
+  logLine(`app:ready — plataforma ${process.platform}, v${app.getVersion()}, proceso vivo hace ${Math.round(process.uptime() * 1000)}ms`);  setupAutoUpdater();
+  createSplash();
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
