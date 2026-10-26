@@ -5,14 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [1.1.2] — 2026-10-26
 
-### Añadido
-- 
-
-### Cambiado
-- 
-
 ### Corregido
-- 
+- El botón **Reiniciar** de la actualización instala en silencio y vuelve a abrir Pliego; antes abría el asistente completo del instalador y la app no se reabría
 
 ## [1.1.1] — 2026-10-26
 
