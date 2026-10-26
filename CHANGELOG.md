@@ -6,13 +6,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 ## [1.1.1] — 2026-10-26
 
 ### Añadido
-- 
-
-### Cambiado
-- 
+- `inicio.log` registra cada búsqueda de actualizaciones y cuando no hay ninguna nueva
 
 ### Corregido
-- 
+- `npm run version:*` ahora actualiza también la versión de `package-lock.json`
 
 ## [1.1.0] — 2026-10-26
 
