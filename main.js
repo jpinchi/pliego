@@ -254,6 +254,14 @@ function setupAutoUpdater() {
   autoUpdater.autoDownload    = true;   // descargar en segundo plano
   autoUpdater.autoInstallOnAppQuit = true; // instalar al cerrar
 
+  autoUpdater.on("checking-for-update", () => {
+    logLine(`update: buscando (versión actual v${app.getVersion()})`);
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    logLine(`update: sin actualizaciones — la última publicada es v${info.version}`);
+  });
+
   autoUpdater.on("update-available", (info) => {
     logLine(`update disponible: v${info.version}`);
     if (win && !win.isDestroyed()) {
