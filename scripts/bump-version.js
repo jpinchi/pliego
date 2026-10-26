@@ -26,10 +26,19 @@ if      (type === "major") newVersion = `${maj+1}.0.0`;
 else if (type === "minor") newVersion = `${maj}.${min+1}.0`;
 else                       newVersion = `${maj}.${min}.${pat+1}`;
 
-// Actualizar package.json
+// Actualizar package.json y package-lock.json
 pkg.version = newVersion;
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 console.log(`✓ package.json → v${newVersion}`);
+
+const lockPath = path.join(root, "package-lock.json");
+if (fs.existsSync(lockPath)) {
+  const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+  lock.version = newVersion;
+  if (lock.packages && lock.packages[""]) lock.packages[""].version = newVersion;
+  fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
+  console.log(`✓ package-lock.json → v${newVersion}`);
+}
 
 // Leer CHANGELOG
 const today = new Date().toISOString().slice(0, 10);
@@ -50,7 +59,7 @@ console.log(`✓ CHANGELOG.md — sección v${newVersion} añadida`);
 
 // Confirmar en git
 try {
-  execSync(`git add "${pkgPath}" "${clPath}"`, { cwd: root });
+  execSync(`git add "${pkgPath}" "${lockPath}" "${clPath}"`, { cwd: root });
   execSync(`git commit -m "chore: bump version to v${newVersion}"`, { cwd: root });
   console.log(`✓ Commit creado: chore: bump version to v${newVersion}`);
 } catch (e) {
