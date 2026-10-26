@@ -11,7 +11,7 @@
 [![Plataforma](https://img.shields.io/badge/Windows-10%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/jpinchi/pliego/releases)
 [![Versión](https://img.shields.io/github/v/release/jpinchi/pliego?style=flat-square&label=versi%C3%B3n&color=f0a020)](https://github.com/jpinchi/pliego/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-46c08a?style=flat-square)](LICENSE)
-[![100% Offline](https://img.shields.io/badge/100%25-offline-8a909e?style=flat-square)](#seguridad)
+[![Sin servidores](https://img.shields.io/badge/sin_servidores-8a909e?style=flat-square)](#seguridad)
 
 <br/>
 
@@ -34,7 +34,7 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
 
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/pilares-m.svg" />
-  <img src="docs/readme/pilares.svg" alt="100% offline, sin internet · 0 cuentas o servidores · Gratis, sin suscripción ni límites · Interfaz bilingüe ES / EN" width="100%" />
+  <img src="docs/readme/pilares.svg" alt="100% local, sin servidores · 0 cuentas ni registros · Gratis, sin suscripción ni límites · Interfaz bilingüe ES / EN" width="100%" />
 </picture>
 
 <br/><br/>
@@ -196,7 +196,7 @@ pdf-lib no tiene una API de alto nivel para `/Outlines`. La solución fue escrib
 
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jpinchi/pliego/main/docs/readme/seguridad-m.svg" />
-  <img src="docs/readme/seguridad.svg" alt="Sandbox estricto (sandbox: true); navegación bloqueada (will-navigate); sin telemetría, 100% offline; XSS mitigado con escapeHtml(); una sola instancia con requestSingleInstanceLock()" width="100%" />
+  <img src="docs/readme/seguridad.svg" alt="Sandbox estricto (sandbox: true); navegación bloqueada (will-navigate); sin telemetría: sin servidores ni datos de uso; XSS mitigado con escapeHtml(); una sola instancia con requestSingleInstanceLock()" width="100%" />
 </picture>
 
 > **Sobre la conexión:** tus documentos nunca salen de tu PC. La única petición de red es la búsqueda de actualizaciones en GitHub Releases (al abrir la app o desde Ajustes), que descarga `latest.yml` y, si hay versión nueva, el instalador. No se envían datos de uso.
@@ -229,6 +229,6 @@ pdf-lib no tiene una API de alto nivel para `/Outlines`. La solución fue escrib
 <details>
 <summary>🇺🇸 English summary</summary>
 
-**Pliego** is a Windows desktop PDF editor built with Electron 31. It lets you annotate, sign, redact, fill forms, add watermarks, manage bookmarks and page numbers — all offline, no account or subscription required. The renderer is a single vanilla-JS HTML file using pdf.js for rendering and pdf-lib for generating the output PDF. Current version: **1.1.3** — download `Pliego-Setup-1.1.3.exe` from the [latest release](https://github.com/jpinchi/pliego/releases/latest) or clone and run with `npm install && npm start`. The installed app updates itself from GitHub Releases (the only network request it makes; your documents never leave your PC), and you can also check manually in **Settings → Updates**.
+**Pliego** is a Windows desktop PDF editor built with Electron 31. It lets you annotate, sign, redact, fill forms, add watermarks, manage bookmarks and page numbers — all on your PC with no servers, no account or subscription required. The renderer is a single vanilla-JS HTML file using pdf.js for rendering and pdf-lib for generating the output PDF. Current version: **1.1.3** — download `Pliego-Setup-1.1.3.exe` from the [latest release](https://github.com/jpinchi/pliego/releases/latest) or clone and run with `npm install && npm start`. The installed app updates itself from GitHub Releases (the only network request it makes; your documents never leave your PC), and you can also check manually in **Settings → Updates**.
 
 </details>
