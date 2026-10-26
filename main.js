@@ -129,7 +129,7 @@ function createSplash() {
   splash.setIgnoreMouseEvents(true);
   splash.loadFile(
     path.join(__dirname, "renderer", "splash.html"),
-    { query: { quiet: quiet ? "1" : "0" } }
+    { query: { quiet: quiet ? "1" : "0", v: app.getVersion() } }
   );
 
   // La animación CSS está lista → mostrar la ventana
