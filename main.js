@@ -2,6 +2,7 @@
 const { app, BrowserWindow, Menu, shell, dialog, ipcMain, systemPreferences } = require("electron");
 const path = require("path");
 const fs   = require("fs");
+const { autoUpdater } = require("electron-updater");
 
 // Decodificar video por software para evitar el "error de video 3" con ciertos drivers GPU
 app.commandLine.appendSwitch("disable-accelerated-video-decode");
@@ -201,6 +202,7 @@ function createWindow() {
   win.webContents.once("did-finish-load", () => {
     logLine(`main:did-finish-load — ${Date.now() - t0}ms`);
     mainReady = true;
+    ipcMain.emit("main:ready");
     tryFinish();
   });
 
@@ -238,6 +240,43 @@ function createWindow() {
   });
 }
 
+// ── Auto-actualización ────────────────────────────────────────────────────────
+function setupAutoUpdater() {
+  // No verificar actualizaciones en desarrollo (npm start sin empaquetar)
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload    = true;   // descargar en segundo plano
+  autoUpdater.autoInstallOnAppQuit = true; // instalar al cerrar
+
+  autoUpdater.on("update-available", (info) => {
+    logLine(`update disponible: v${info.version}`);
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("update:available", { version: info.version });
+    }
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    logLine(`update descargado: v${info.version}`);
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("update:downloaded", { version: info.version });
+    }
+  });
+
+  autoUpdater.on("error", (err) => {
+    logLine(`update error: ${err.message}`);
+  });
+
+  // Verificar 5 segundos después de que la ventana principal esté lista
+  ipcMain.once("main:ready", () => {
+    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 5000);
+  });
+}
+
+// Instalar actualización descargada (el renderer lo pide)
+ipcMain.handle("update:install", () => {
+  autoUpdater.quitAndInstall(false, true);
+});
+
 // ── Ajuste del splash desde preferencias ─────────────────────────────────────
 ipcMain.handle("splash:getSettings", () => loadSplashSettings());
 ipcMain.handle("splash:setSettings", (_, s) => { saveSplashSettings(s); return true; });
@@ -267,6 +306,7 @@ ipcMain.handle("file:readByPath", async (_, filePath) => {
 // ── Arranque ──────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   logLine(`app:ready — plataforma ${process.platform}, v${app.getVersion()}`);
+  setupAutoUpdater();
   createSplash();   // se crea ANTES que la ventana principal
   createWindow();
   app.on("activate", () => {

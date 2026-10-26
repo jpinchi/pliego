@@ -18,3 +18,10 @@ contextBridge.exposeInMainWorld("pliegoFiles", {
   openDialog: () => ipcRenderer.invoke("dialog:openPdf"),
   readByPath: (filePath) => ipcRenderer.invoke("file:readByPath", filePath)
 });
+
+// Auto-actualización
+contextBridge.exposeInMainWorld("pliegoUpdate", {
+  onAvailable: (cb) => ipcRenderer.on("update:available",  (_e, info) => cb(info)),
+  onDownloaded: (cb) => ipcRenderer.on("update:downloaded", (_e, info) => cb(info)),
+  install:     () => ipcRenderer.invoke("update:install"),
+});

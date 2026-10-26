@@ -3960,4 +3960,17 @@ $("#settingsLang").onchange=e=>setLang(e.target.value);
 $("#settingsTheme").onchange=e=>applyTheme(e.target.value);
 $("#settingsZoom").onchange=e=>{ try{ localStorage.setItem("pliego_default_zoom", e.target.value); }catch(_){} };
 $("#settingsAutoTour").onchange=e=>{ try{ localStorage.setItem("pliego_auto_tour", e.target.checked?"1":"0"); }catch(_){} };
+
+// Auto-actualización
+if(window.pliegoUpdate){
+  window.pliegoUpdate.onAvailable(info=>{
+    toast(`Nueva versión v${info.version} disponible. Descargando…`,"ok");
+  });
+  window.pliegoUpdate.onDownloaded(info=>{
+    // Toast persistente con botón para instalar
+    const t=$("#toast");
+    t.innerHTML=`v${info.version} lista. <button onclick="window.pliegoUpdate.install()" style="margin-left:8px;padding:2px 10px;border-radius:6px;border:none;background:var(--accent,#f0a020);color:#0d1018;font-weight:700;cursor:pointer;font-size:11px">Reiniciar</button>`;
+    t.className="toast show ok";
+  });
+}
 </script>

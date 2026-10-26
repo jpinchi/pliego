@@ -1,7 +1,7 @@
 {
   "name": "pliego",
   "productName": "Pliego",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Pliego — Editor de PDF de escritorio",
   "main": "main.js",
   "author": "jpinchi",
@@ -11,7 +11,14 @@
     "start": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win",
+    "release": "electron-builder --win --publish always",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
     "electron": "^31.3.0",
@@ -26,12 +33,18 @@
     "directories": {
       "output": "dist"
     },
+    "publish": {
+      "provider": "github",
+      "owner": "jpinchi",
+      "repo": "pliego"
+    },
     "files": [
       "main.js",
       "preload.js",
       "preload-splash.js",
       "renderer/**/*",
-      "build/icon.*"
+      "build/icon.*",
+      "node_modules/electron-updater/**/*"
     ],
     "win": {
       "target": [
