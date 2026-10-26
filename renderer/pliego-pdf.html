@@ -3652,7 +3652,7 @@ function renderRecentFiles(){
     const row=document.createElement("button");
     row.type="button"; row.className="btn ghost";
     row.style.cssText="width:100%;justify-content:flex-start;text-align:left;overflow:hidden";
-    row.innerHTML=recentFileIcon()+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+item.name+'</span>';
+    row.innerHTML=recentFileIcon()+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(item.name)+'</span>';
     row.onclick=()=>openRecentFile(item);
     listEl.appendChild(row);
   }
