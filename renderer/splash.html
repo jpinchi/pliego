@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pliego</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  :root{
+    --bg:     #0e1117;
+    --chrome: #20242c;
+    --accent: #f0a020;
+    --ink:    #e7e9ee;
+    --muted:  #8a909e;
+    --line:   #2a2f3a;
+  }
+
+  html,body{
+    width:100%;height:100%;
+    background:transparent;
+    overflow:hidden;
+    font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    user-select:none;
+  }
+
+  /* Ventana principal */
+  .window{
+    width:100%;height:100%;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:16px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:0;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* Glow ambarino detrás del logo */
+  .glow{
+    position:absolute;
+    width:260px;height:260px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(240,160,32,.18) 0%, transparent 70%);
+    top:50%;left:50%;
+    transform:translate(-50%,-60%);
+    opacity:0;
+    animation:glowIn 600ms 200ms ease forwards;
+  }
+
+  /* Línea superior decorativa */
+  .topline{
+    position:absolute;
+    top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+    transform:scaleX(0);
+    transform-origin:center;
+    animation:lineIn 500ms 100ms cubic-bezier(.22,1,.36,1) forwards;
+  }
+
+  /* Logo */
+  .logo-wrap{
+    position:relative;z-index:1;
+    opacity:0;transform:scale(.6) translateY(10px);
+    animation:logoIn 500ms 250ms cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  .logo{
+    width:72px;height:72px;border-radius:18px;
+    background:linear-gradient(145deg,#f5b030,#e08010);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 32px rgba(240,160,32,.35), 0 2px 8px rgba(0,0,0,.4);
+    font-size:46px;font-weight:800;color:#1a1206;
+    letter-spacing:-2px;
+    font-family:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  }
+
+  /* Nombre de la app */
+  .app-name{
+    margin-top:20px;
+    font-size:28px;font-weight:700;
+    color:var(--ink);letter-spacing:-.5px;
+    position:relative;z-index:1;
+    opacity:0;transform:translateY(14px);
+    animation:textIn 450ms 420ms cubic-bezier(.22,1,.36,1) forwards;
+  }
+
+  /* Subtítulo */
+  .subtitle{
+    margin-top:4px;
+    font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;
+    color:var(--muted);
+    position:relative;z-index:1;
+    opacity:0;
+    animation:fadeIn 400ms 560ms ease forwards;
+  }
+
+  /* Barra de progreso */
+  .progress-wrap{
+    position:absolute;bottom:24px;left:32px;right:32px;
+    height:2px;background:var(--line);border-radius:99px;overflow:hidden;
+    opacity:0;
+    animation:fadeIn 200ms 600ms ease forwards;
+  }
+  .progress-bar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg, var(--accent), #ffcc60);
+    border-radius:99px;
+    animation:progress 1400ms 650ms cubic-bezier(.4,0,.2,1) forwards;
+  }
+
+  /* Versión */
+  .version{
+    position:absolute;bottom:32px;right:32px;
+    font-size:10px;color:var(--muted);letter-spacing:.3px;
+    opacity:0;
+    animation:fadeIn 300ms 700ms ease forwards;
+  }
+
+  /* ── Keyframes ── */
+  @keyframes glowIn{
+    to{opacity:1}
+  }
+  @keyframes lineIn{
+    to{transform:scaleX(1)}
+  }
+  @keyframes logoIn{
+    to{opacity:1;transform:scale(1) translateY(0)}
+  }
+  @keyframes textIn{
+    to{opacity:1;transform:translateY(0)}
+  }
+  @keyframes fadeIn{
+    to{opacity:1}
+  }
+  @keyframes progress{
+    0%  {width:0%}
+    60% {width:70%}
+    85% {width:88%}
+    100%{width:100%}
+  }
+
+  /* Fade-out al cerrar */
+  body.closing .window{
+    animation:windowOut 280ms ease forwards;
+  }
+  @keyframes windowOut{
+    to{opacity:0;transform:scale(.97)}
+  }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="topline"></div>
+  <div class="glow"></div>
+
+  <div class="logo-wrap">
+    <div class="logo">P</div>
+  </div>
+
+  <div class="app-name">Pliego</div>
+  <div class="subtitle">PDF Editor</div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"></div>
+  </div>
+
+  <div class="version">v1.0.0</div>
+</div>
+
+<script>
+  // El proceso principal le avisa cuando el renderer principal ya está listo.
+  // Entonces hacemos fade-out y cerramos.
+  if(window.splashBridge){
+    window.splashBridge.onReady(()=>{
+      document.body.classList.add("closing");
+      setTimeout(()=>window.splashBridge.close(), 280);
+    });
+  } else {
+    // Fallback si corremos el splash fuera de Electron (dev/preview)
+    setTimeout(()=>{
+      document.body.classList.add("closing");
+    }, 2200);
+  }
+</script>
+</body>
+</html>
