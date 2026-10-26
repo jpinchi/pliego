@@ -31,7 +31,7 @@ function createSplash() {
     height: 300,
     frame: false,
     transparent: false,
-    backgroundColor: "#0e1117",
+    backgroundColor: "#0d1018",
     resizable: false,
     skipTaskbar: true,
     center: true,
