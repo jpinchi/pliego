@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Incrementa la versión semántica en package.json y actualiza CHANGELOG.md.
+ * Incrementa la versión semántica en package.json, package-lock.json, README.md y CHANGELOG.md.
  * Uso: node scripts/bump-version.js [patch|minor|major]
  */
 const fs   = require("fs");
@@ -40,6 +40,17 @@ if (fs.existsSync(lockPath)) {
   console.log(`✓ package-lock.json → v${newVersion}`);
 }
 
+// README: enlaces de descarga, nombres de archivo y "Versión actual" apuntan a la versión vigente
+const readmePath = path.join(root, "README.md");
+const oldVersion = `${maj}.${min}.${pat}`;
+if (fs.existsSync(readmePath)) {
+  const exact = new RegExp(`(?<![\\d.])${oldVersion.replace(/\./g, "\\.")}(?!\\.?\\d)`, "g");
+  const readme = fs.readFileSync(readmePath, "utf8");
+  const count = (readme.match(exact) || []).length;
+  fs.writeFileSync(readmePath, readme.replace(exact, newVersion));
+  console.log(`✓ README.md — ${count} referencias v${oldVersion} → v${newVersion}`);
+}
+
 // Leer CHANGELOG
 const today = new Date().toISOString().slice(0, 10);
 let cl = "";
@@ -59,7 +70,7 @@ console.log(`✓ CHANGELOG.md — sección v${newVersion} añadida`);
 
 // Confirmar en git
 try {
-  execSync(`git add "${pkgPath}" "${lockPath}" "${clPath}"`, { cwd: root });
+  execSync(`git add "${pkgPath}" "${lockPath}" "${readmePath}" "${clPath}"`, { cwd: root });
   execSync(`git commit -m "chore: bump version to v${newVersion}"`, { cwd: root });
   console.log(`✓ Commit creado: chore: bump version to v${newVersion}`);
 } catch (e) {

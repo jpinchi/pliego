@@ -137,9 +137,11 @@ npm run dist:win
 
 ### Publicar una versión nueva
 
-1. `npm run version:patch` (o `version:minor` / `version:major`): sube la versión en `package.json` y `package-lock.json`, añade la sección en `CHANGELOG.md` y hace el commit.
+1. `npm run version:patch` (o `version:minor` / `version:major`): sube la versión en `package.json`, `package-lock.json` y en los enlaces y textos de este README, añade la sección en `CHANGELOG.md` y hace el commit. La versión solo se escribe en `package.json`: la app, el splash y Ajustes la leen de ahí.
 2. Completa la sección nueva del `CHANGELOG.md` y haz commit.
-3. `npm run dist:win` y publica en GitHub Releases el instalador, el `.blockmap` y `latest.yml`. Los archivos deben llamarse con guiones (`Pliego-Setup-X.Y.Z.exe`), que es el nombre que busca `latest.yml`. `npm run release` lo hace todo de una vez si tienes `GH_TOKEN` en el entorno.
+3. `npm run dist:win` vacía `dist/` y genera solo la versión nueva; las anteriores quedan en GitHub Releases. Publica en Releases el instalador, el `.blockmap` y `latest.yml`, con los nombres con guiones (`Pliego-Setup-X.Y.Z.exe`), que es el nombre que busca `latest.yml`. `npm run release` lo hace todo de una vez si tienes `GH_TOKEN` en el entorno.
+
+Publica la release justo después de subir el commit de versión: hasta entonces, los enlaces de descarga del README apuntan a una versión que aún no existe.
 
 Las apps instaladas encuentran la versión nueva leyendo `latest.yml` de la última release. Cada arranque, y cada búsqueda de actualizaciones, queda registrado en `%APPDATA%\pliego\logs\inicio.log`.
 
