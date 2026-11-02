@@ -6,13 +6,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 ## [1.1.4] — 2026-11-02
 
 ### Añadido
-- 
-
-### Cambiado
-- 
+- **Relleno en formas:** el rectángulo y el círculo pueden ir rellenos de un color sólido, distinto o igual al del borde
+- **Color personalizado** en todas las paletas: Dibujo, Resaltar, Texto, Formas, Marcado, Tapar datos, Editar texto, Marca de agua, Números de página, Firma y Ajustes. Se recuerdan los últimos 5 colores personalizados
+- Color en Editar texto, Marca de agua y Números de página, que antes eran fijos
 
 ### Corregido
-- 
+- El color seleccionado se distingue también con el tema claro
 
 ## [1.1.3] — 2026-10-26
 
