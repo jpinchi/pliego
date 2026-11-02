@@ -318,6 +318,7 @@
   .seg{display:flex;gap:6px;margin-bottom:12px}
   .seg .btn{flex:1}
   .seg .btn.on{border-color:var(--accent);background:var(--accent-soft)}
+  .props-sep{border:0;border-top:1px solid var(--line);margin:14px 0}
   .hint{font-size:11.5px;color:var(--muted);line-height:1.55;background:var(--panel-2);
     border:1px solid var(--line);border-radius:8px;padding:10px 11px;margin-bottom:12px}
   .hint b{color:var(--accent)}
@@ -841,6 +842,28 @@ const I18N = {
     keyDelete: "Supr",
     msgCopied: "Copiado",
     msgCut: "Cortado",
+    propsTitle: "Propiedades",
+    propsHintMenu: "Arrastra para mover y usa la esquina para cambiar el tamaño. Clic derecho para copiar, duplicar u ordenar.",
+    propsHintEdit: "Para cambiar este texto, su tamaño o su color, usa la herramienta Editar texto.",
+    labelStroke: "Grosor",
+    labelRotation: "Rotación (°)",
+    labelStyle: "Estilo",
+    labelLineEnd: "Extremo",
+    styleBold: "Negrita",
+    styleItalic: "Cursiva",
+    typeText: "Texto",
+    typeRect: "Rectángulo",
+    typeEllipse: "Círculo",
+    typeLine: "Línea",
+    typeArrow: "Flecha",
+    typeDraw: "Dibujo a mano",
+    typeHighlight: "Resaltado",
+    typeTextmark: "Subrayado o tachado",
+    typeRedact: "Dato tapado",
+    typeImage: "Imagen",
+    typeSign: "Firma",
+    typeEdit: "Texto editado",
+    typeOther: "Elemento",
     ctxDescShapes: "Elige forma y arrastra para dibujarla.",
     ctxDescMarkup: "Haz clic sobre una palabra para subrayarla o tacharla.",
     labelShape: "Forma",
@@ -1135,6 +1158,28 @@ const I18N = {
     keyDelete: "Del",
     msgCopied: "Copied",
     msgCut: "Cut",
+    propsTitle: "Properties",
+    propsHintMenu: "Drag to move and use the corner to resize. Right-click to copy, duplicate or arrange.",
+    propsHintEdit: "To change this text, its size or color, use the Edit text tool.",
+    labelStroke: "Thickness",
+    labelRotation: "Rotation (°)",
+    labelStyle: "Style",
+    labelLineEnd: "End",
+    styleBold: "Bold",
+    styleItalic: "Italic",
+    typeText: "Text",
+    typeRect: "Rectangle",
+    typeEllipse: "Circle",
+    typeLine: "Line",
+    typeArrow: "Arrow",
+    typeDraw: "Freehand drawing",
+    typeHighlight: "Highlight",
+    typeTextmark: "Underline or strikethrough",
+    typeRedact: "Redaction",
+    typeImage: "Image",
+    typeSign: "Signature",
+    typeEdit: "Edited text",
+    typeOther: "Item",
     ctxDescShapes: "Choose a shape and drag to draw it.",
     ctxDescMarkup: "Click on a word to underline or strike it through.",
     labelShape: "Shape",
@@ -1448,11 +1493,12 @@ const measureCtx = document.createElement("canvas").getContext("2d");
 
 /* ----- Texto multilínea ----- */
 const TEXT_LINE = 1.25;   // interlineado relativo al tamaño de letra
-const textFont = px => px+"px Inter, sans-serif";
+const textFont = (px, a) => (a && a.italic ? "italic " : "")+(a && a.bold ? "bold " : "")+px+"px Inter, sans-serif";
 // Parte el texto en líneas: saltos explícitos (\n) y, si la caja tiene ancho, ajuste por palabras.
 // Se usa igual en pantalla y al exportar, para que los saltos coincidan en ambos.
-function layoutTextBox(text, px, maxW){
-  measureCtx.font=textFont(px);
+// "a" aporta el estilo (negrita/cursiva), que cambia el ancho de las letras.
+function layoutTextBox(text, px, maxW, a){
+  measureCtx.font=textFont(px, a);
   const fits=s=>measureCtx.measureText(s).width<=maxW;
   const lines=[];
   for(const para of String(text||"").split("\n")){
@@ -2301,6 +2347,10 @@ function drawOverlay(){
     ctx.restore();
   }
   updateSelectDeleteBtn();
+  // Si cambió la selección, el panel de Mover muestra las propiedades del nuevo elemento
+  if(activeTool==="select" && selectedOnPage()!==propsFor){
+    const tl=TOOLBOX.find(x=>x && x.id==="select"); if(tl) renderToolPanel(tl);
+  }
 }
 /* Botón flotante para borrar lo seleccionado con la herramienta Mover (cualquier tipo de anotación). */
 function updateSelectDeleteBtn(){
@@ -2363,8 +2413,8 @@ function getBBox(a){
   }
   if(a.type==="text"){
     const W=ov.width||1, H=ov.height||1, px=a.size*zoom;
-    const lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0);
-    measureCtx.font=textFont(px);
+    const lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0, a);
+    measureCtx.font=textFont(px, a);
     const wPx=a.w ? a.w*W : Math.max(0,...lines.map(l=>measureCtx.measureText(l).width));
     return {x:a.x, y:a.y, w:Math.max(0.02,wPx/W), h:(px+(lines.length-1)*px*TEXT_LINE)/H};
   }
@@ -2448,8 +2498,8 @@ function paintAnnot(ctx,a,W,H){
     ctx.fillRect(a.x*W,a.y*H,a.w*W,a.h*H); ctx.globalAlpha=1;
   } else if(a.type==="text"){
     if(!a._editing){   // mientras se edita, lo muestra el editor sobre la página
-      const px=a.size*zoom, lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0);
-      ctx.fillStyle=a.color; ctx.font=textFont(px); ctx.textBaseline="top";
+      const px=a.size*zoom, lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0, a);
+      ctx.fillStyle=a.color; ctx.font=textFont(px, a); ctx.textBaseline="top";
       lines.forEach((ln,i)=>ctx.fillText(ln, a.x*W, a.y*H+i*px*TEXT_LINE));
     }
   } else if((a.type==="sign"||a.type==="image") && a._img){
@@ -2639,8 +2689,9 @@ function previewOcrBox(p){
   ctx.restore();
 }
 ov.addEventListener("pointerup",async e=>{
-  if(rotating){ const ch=rotating.rotated; rotating=null; ov.style.cursor="grab"; drawOverlay(); if(ch) commit(); return; }
-  if(resizing){ const ch=resizing.resized; resizing=null; drawOverlay(); if(ch) commit(); return; }
+  // propsFor=null: el panel de propiedades vuelve a leer la rotación / el tamaño nuevos
+  if(rotating){ const ch=rotating.rotated; rotating=null; ov.style.cursor="grab"; if(ch) propsFor=null; drawOverlay(); if(ch) commit(); return; }
+  if(resizing){ const ch=resizing.resized; resizing=null; if(ch) propsFor=null; drawOverlay(); if(ch) commit(); return; }
   if(moving){ const ch=moving.moved; moving=null; ov.style.cursor="grab"; drawOverlay(); if(ch) commit(); return; }
   if(!drawing) return; drawing=false;
   const p=ptFromEvent(e);
@@ -2964,6 +3015,7 @@ function openTextEditor(a,isNew){
   ta.style.left=(a.x*W)+"px";
   ta.style.top=(a.y*H-(TEXT_LINE-1)/2*px)+"px";   // alinea la primera línea con el texto ya dibujado
   ta.style.fontSize=px+"px"; ta.style.color=a.color;
+  ta.style.fontWeight=a.bold?"bold":"normal"; ta.style.fontStyle=a.italic?"italic":"normal";
   if(a.w) ta.style.width=(a.w*W)+"px";
   textEditor={ ta, a, isNew, pid:pages[current].id };
   a._editing=true; drawOverlay();
@@ -3250,6 +3302,8 @@ function renderToolPanel(tool){
     if(tool.id==="text") html+='<div class="hint">'+t("hintTextKeys")+'</div>';
     html+='<div class="hint">'+t("hintEmbedOnSave")+'</div>';
   } else if(tool.id==="select"){
+    propsFor=selectedOnPage();
+    html+=propsHtml(propsFor);
     html+='<p class="ctx-title">'+t("ctxTitleMove")+'</p>'+
       '<p class="ctx-sub">'+t("ctxSubMove")+'</p>'+
       '<div style="display:flex;flex-direction:column;gap:7px;margin-top:8px">'+
@@ -3294,6 +3348,7 @@ function renderToolPanel(tool){
   $("#ctxBody").querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{ shapeFill=b.dataset.fill==="1"; renderToolPanel(tool); });
   const tsi=$("#textSizeInp");
   if(tsi) tsi.onchange=()=>{ textSize=Math.max(6, Math.min(96, parseFloat(tsi.value)||16)); tsi.value=textSize; };
+  if(tool.id==="select" && propsFor) bindProps(propsFor, tool);
   $("#ctxBody").querySelectorAll("[data-sk]").forEach(b=>b.onclick=()=>{ shapeKind=b.dataset.sk; renderToolPanel(tool); });
   $("#ctxBody").querySelectorAll("[data-mk]").forEach(b=>b.onclick=()=>{ markKind=b.dataset.mk; renderToolPanel(tool); });
   const fst=$("#forceScanToggle");
@@ -3304,6 +3359,73 @@ function renderToolPanel(tool){
     renderToolPanel(tool);
   };
   bindSelectionActions();
+}
+/* ----- Propiedades del elemento seleccionado (herramienta Mover) ----- */
+var propsFor=null;   // anotación cuyas propiedades muestra el panel; var: drawOverlay la consulta desde el arranque
+const PROP_TYPE_KEY={ text:"typeText", rect:"typeRect", ellipse:"typeEllipse", line:"typeLine", arrow:"typeArrow",
+  draw:"typeDraw", highlight:"typeHighlight", textmark:"typeTextmark", redact:"typeRedact", image:"typeImage",
+  sign:"typeSign", edit:"typeEdit" };
+function propsHtml(a){
+  if(!a) return "";
+  const T=a.type;
+  const lab=k=>'<span class="ctx-label">'+t(k)+'</span>';
+  const num=(id,val,min,max)=>'<input type="number" id="'+id+'" value="'+val+'" min="'+min+'" max="'+max+'" step="1">';
+  const seg=(attr,opts,cur)=>'<div class="seg" role="group">'+opts.map(([v,label])=>
+    '<button type="button" class="btn ghost'+(v===cur?" on":"")+'" data-'+attr+'="'+v+'" aria-pressed="'+(v===cur)+'">'+label+'</button>').join("")+'</div>';
+  let h='<div class="props"><p class="ctx-title">'+t("propsTitle")+'</p><p class="ctx-sub">'+t(PROP_TYPE_KEY[T]||"typeOther")+'</p>';
+  if(T==="text"){
+    h+='<label class="field">'+lab("labelTextSize")+num("propSize",Math.round(a.size),6,96)+'</label>';
+    h+=lab("labelStyle")+'<div class="seg" role="group">'+
+      '<button type="button" class="btn ghost'+(a.bold?" on":"")+'" data-ptog="bold" aria-pressed="'+!!a.bold+'" aria-label="'+t("styleBold")+'" style="font-weight:700">B</button>'+
+      '<button type="button" class="btn ghost'+(a.italic?" on":"")+'" data-ptog="italic" aria-pressed="'+!!a.italic+'" aria-label="'+t("styleItalic")+'" style="font-style:italic">I</button></div>';
+  }
+  if(T==="edit") h+='<div class="hint">'+t("propsHintEdit")+'</div>';
+  if(!["image","sign","edit"].includes(T)){
+    const presets = T==="redact" ? ["#000000","#ffffff"] : PRESET_COLORS;
+    h+=lab((T==="rect"||T==="ellipse")?"labelBorderColor":"labelColor")+'<div id="propColorRow">'+colorRowHtml(a.color,presets)+'</div>';
+  }
+  if(["rect","ellipse","line","arrow","draw"].includes(T)){
+    h+='<label class="field">'+lab("labelStroke")+num("propStroke",a.width||(T==="draw"?3:2),1,12)+'</label>';
+  }
+  if(T==="rect"||T==="ellipse"){
+    h+=lab("labelFill")+seg("pfill",[["0",t("fillNone")],["1",t("fillSolid")]],a.fill?"1":"0");
+    if(a.fill) h+=lab("labelFillColor")+'<div id="propFillRow">'+colorRowHtml(a.fill)+'</div>';
+  }
+  if(T==="line"||T==="arrow") h+=lab("labelLineEnd")+seg("pkind",[["line",t("typeLine")],["arrow",t("typeArrow")]],T);
+  if(T==="textmark") h+=lab("labelType")+seg("pmark",[["underline",t("btnUnderlineShort")],["strike",t("btnStrikeShort")]],a.mode);
+  if(ROTATABLE_TYPES.has(T)) h+='<label class="field">'+lab("labelRotation")+num("propRot",Math.round(a.rot||0),0,359)+'</label>';
+  h+='<div class="hint">'+t("propsHintMenu")+'</div></div><hr class="props-sep">';
+  return h;
+}
+function bindProps(a, tool){
+  // Aplica un cambio, redibuja y lo guarda en el historial solo si de verdad cambió algo
+  const change=(fn)=>{
+    const before=JSON.stringify(cloneAnnot(a));
+    fn();
+    if(JSON.stringify(cloneAnnot(a))!==before){ drawOverlay(); commit(); }
+    renderToolPanel(tool);
+  };
+  bindColorRow($("#propColorRow"), c=>change(()=>{ a.color=c; }));
+  bindColorRow($("#propFillRow"),  c=>change(()=>{ a.fill=c; }));
+  // Campos numéricos: se ve en vivo al escribir; se guarda en el historial al confirmar
+  const numBind=(id, apply)=>{
+    const el=$("#"+id); if(!el) return;
+    let saved=el.value;   // último valor guardado en el historial
+    el.oninput=()=>{ const v=parseFloat(el.value); if(Number.isFinite(v)){ apply(v); drawOverlay(); } };
+    el.onchange=()=>{
+      const v=parseFloat(el.value);
+      if(!Number.isFinite(v) || el.value===saved) return;
+      saved=el.value; apply(v); drawOverlay(); commit();
+    };
+  };
+  numBind("propSize",   v=>{ a.size=Math.max(6, Math.min(96, v)); });
+  numBind("propStroke", v=>{ a.width=Math.max(1, Math.min(12, v)); });
+  numBind("propRot",    v=>{ a.rot=((Math.round(v)%360)+360)%360; });
+  const body=$("#ctxBody");
+  body.querySelectorAll("[data-ptog]").forEach(b=>b.onclick=()=>change(()=>{ a[b.dataset.ptog]=!a[b.dataset.ptog]; }));
+  body.querySelectorAll("[data-pfill]").forEach(b=>b.onclick=()=>change(()=>{ a.fill = b.dataset.pfill==="1" ? (a.fill||a.color) : null; }));
+  body.querySelectorAll("[data-pkind]").forEach(b=>b.onclick=()=>change(()=>{ a.type=b.dataset.pkind; }));
+  body.querySelectorAll("[data-pmark]").forEach(b=>b.onclick=()=>change(()=>{ a.mode=b.dataset.pmark; }));
 }
 function selectionPanelHtml(){
   return '<div style="margin-top:16px"><p class="ctx-title" style="font-size:12px">'+t("titleBatchSelection")+'</p>'+
@@ -3544,11 +3666,12 @@ async function buildFlattenedBytes(){
         } else if(a.type==="text"){
           // Una llamada por línea: pdf-lib no admite "\n" en drawText. Mismo ajuste que en pantalla.
           const size=a.size, [ccx,ccy]=annotCenterPdf(a,W,H);
-          layoutTextBox(a.text, size, a.w ? a.w*W : 0).forEach((ln,i)=>{
+          const tf=pickFont(a);
+          layoutTextBox(a.text, size, a.w ? a.w*W : 0, a).forEach((ln,i)=>{
             if(!ln) return;
             const ax=a.x*W, ay=toY(a.y)-size-i*size*TEXT_LINE;
             const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-            p.drawText(ln,{ x:rp.x, y:rp.y, size, font, color:hexToRgb(a.color), rotate:degrees(a.rot||0) });
+            p.drawText(ln,{ x:rp.x, y:rp.y, size, font:tf, color:hexToRgb(a.color), rotate:degrees(a.rot||0) });
           });
         } else if(a.type==="sign" || a.type==="image"){
           const isPng = /^data:image\/png/i.test(a.data);
