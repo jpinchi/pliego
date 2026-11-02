@@ -6,13 +6,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 ## [1.1.6] — 2026-11-02
 
 ### Añadido
-- 
-
-### Cambiado
-- 
-
-### Corregido
-- 
+- **Panel de propiedades:** al seleccionar un elemento con Mover (o con clic derecho), el panel derecho permite editarlo
+  - Texto: tamaño de letra, negrita, cursiva, color y rotación
+  - Rectángulo y círculo: color y grosor del borde, relleno y su color, rotación
+  - Línea y flecha: color, grosor y convertir una en la otra
+  - Dibujo a mano: color y grosor · Resaltado y tapado: color · Subrayado/tachado: color y tipo
+  - Imagen y firma: rotación
+- La negrita y la cursiva de los textos se conservan en el PDF guardado
 
 ## [1.1.5] — 2026-11-02
 
