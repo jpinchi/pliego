@@ -369,6 +369,18 @@ ipcMain.handle("file:readByPath", async (_, filePath) => {
   } catch (_) { return { error: true }; }
 });
 
+// Fuente de las anotaciones (Arial, incluida en Windows). El renderer la usa en pantalla
+// y la incrusta al guardar, para que el PDF sea idéntico a lo que se ve.
+const ANNOT_FONT_FILES = { regular: "arial.ttf", bold: "arialbd.ttf", italic: "ariali.ttf", boldItalic: "arialbi.ttf" };
+ipcMain.handle("fonts:annot", async () => {
+  const dir = path.join(process.env.WINDIR || "C:\\Windows", "Fonts");
+  const out = {};
+  for (const [k, f] of Object.entries(ANNOT_FONT_FILES)) {
+    try { out[k] = await fs.promises.readFile(path.join(dir, f)); } catch (_) { out[k] = null; }
+  }
+  return out;
+});
+
 // ── Arranque ──────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   logLine(`app:ready — plataforma ${process.platform}, v${app.getVersion()}, proceso vivo hace ${Math.round(process.uptime() * 1000)}ms`);

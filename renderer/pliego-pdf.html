@@ -24,6 +24,7 @@
 
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
 
 <style>
   /* ----- Tokens de diseño: "drafting studio" acero + ámbar ----- */
@@ -218,7 +219,7 @@
   /* Editor de texto sobre la página (herramienta Texto) */
   .text-editor{position:absolute;z-index:7;margin:0;padding:0;border:0;resize:none;overflow:hidden;
     background:rgba(255,255,255,.55);outline:1.5px dashed var(--accent);outline-offset:3px;
-    min-width:40px;line-height:1.25;font-family:Inter,sans-serif;caret-color:currentColor}
+    min-width:40px;line-height:1.25;font-family:Arial,Helvetica,sans-serif;font-kerning:none;caret-color:currentColor}
 
   /* Menú contextual de las anotaciones (clic derecho) */
   .ctx-menu{position:fixed;z-index:200;min-width:220px;padding:5px;background:var(--panel);
@@ -1490,15 +1491,34 @@ function bindColorRow(row, onPick){
 
 /* Mide texto para ajustar el tamaño de fuente y que quepa en la caja. */
 const measureCtx = document.createElement("canvas").getContext("2d");
+// Fija la fuente de las anotaciones en un canvas, sin kerning: el PDF no lo aplica y así
+// pantalla, medidas y PDF colocan cada letra igual. Asignar ctx.font reactiva el kerning
+// por dentro aunque fontKerning siga diciendo "none" (Chromium), por eso se alterna.
+const setTextFont = (ctx, px, style) => { ctx.fontKerning="normal"; ctx.font=textFont(px, style); ctx.fontKerning="none"; };
 
-/* ----- Texto multilínea ----- */
+/* ----- Texto de las anotaciones -----
+   Todo lo que Pliego escribe sobre la página usa Arial, la misma fuente que se incrusta
+   al guardar: así el PDF guardado tiene exactamente las mismas letras, anchos y saltos
+   de línea que la pantalla. */
+const ANNOT_FAMILY = "Arial, Helvetica, sans-serif";
 const TEXT_LINE = 1.25;   // interlineado relativo al tamaño de letra
-const textFont = (px, a) => (a && a.italic ? "italic " : "")+(a && a.bold ? "bold " : "")+px+"px Inter, sans-serif";
+const textFont = (px, a) => (a && a.italic ? "italic " : "")+(a && a.bold ? "bold " : "")+px+"px "+ANNOT_FAMILY;
+// Distancia del borde superior de la letra a la línea base, relativa al tamaño. El texto se
+// dibuja sobre la línea base (no con textBaseline "top", que cada motor calcula a su manera).
+const TEXT_ASC = (()=>{
+  measureCtx.font="100px "+ANNOT_FAMILY;
+  const m=measureCtx.measureText("H");
+  if(m.emHeightAscent>0) return m.emHeightAscent/100;
+  if(m.fontBoundingBoxAscent>0) return m.fontBoundingBoxAscent/(m.fontBoundingBoxAscent+m.fontBoundingBoxDescent);
+  return 0.81;
+})();
+const textWidth = (s, px, style) => { setTextFont(measureCtx, px, style); return measureCtx.measureText(s).width; };
 // Parte el texto en líneas: saltos explícitos (\n) y, si la caja tiene ancho, ajuste por palabras.
-// Se usa igual en pantalla y al exportar, para que los saltos coincidan en ambos.
+// Se calcula en puntos de página (px = tamaño en pt, maxW en pt), así no depende del zoom
+// y da las mismas líneas en pantalla y al guardar.
 // "a" aporta el estilo (negrita/cursiva), que cambia el ancho de las letras.
 function layoutTextBox(text, px, maxW, a){
-  measureCtx.font=textFont(px, a);
+  setTextFont(measureCtx, px, a);
   const fits=s=>measureCtx.measureText(s).width<=maxW;
   const lines=[];
   for(const para of String(text||"").split("\n")){
@@ -1539,29 +1559,6 @@ function fitTextarea(ta){
   const base = parseFloat(ta.dataset.base)||13;
   let size = base; ta.style.fontSize = size+"px";
   while(size>5 && ta.scrollHeight > ta.clientHeight+1){ size-=0.5; ta.style.fontSize=size+"px"; }
-}
-/* Envuelve texto (respetando saltos con Enter) para dibujarlo en el PDF. */
-function wrapTextLines(text, font, size, maxW){
-  const out=[];
-  for(const para of String(text).split(/\r?\n/)){
-    if(para===""){ out.push(""); continue; }
-    let line="";
-    for(const word of para.split(/\s+/)){
-      const test=line?line+" "+word:word;
-      if(font.widthOfTextAtSize(test,size)<=maxW){ line=test; continue; }
-      if(line){ out.push(line); line=""; }
-      if(font.widthOfTextAtSize(word,size)>maxW){   // palabra más ancha que la caja: corta por letras
-        let chunk="";
-        for(const ch of word){
-          if(font.widthOfTextAtSize(chunk+ch,size)<=maxW) chunk+=ch;
-          else { if(chunk) out.push(chunk); chunk=ch; }
-        }
-        line=chunk;
-      } else line=word;
-    }
-    out.push(line);
-  }
-  return out;
 }
 
 /* ===================== RIEL / PANEL DE HERRAMIENTAS ===================== */
@@ -1798,17 +1795,11 @@ async function splitAtPage(){
   const h2=await pickSaveHandle(name+"-parte2.pdf"); if(h2==="abort") return;
   busy(true,t("msgSplitting"));
   try{
-    const cache={};
-    const build=async(pgs)=>{
-      const out=await PDFDocument.create();
-      for(const page of pgs){
-        if(!cache[page.srcId]) cache[page.srcId]=await PDFDocument.load(sources.find(s=>s.id===page.srcId).bytes,{ignoreEncryption:true});
-        const [cp]=await out.copyPages(cache[page.srcId],[page.srcPageIndex]);
-        cp.setRotation(degrees((cp.getRotation().angle+page.rotation)%360)); out.addPage(cp);
-      } return await out.save();
-    };
-    const b1=await build(pages.slice(0,current+1));
-    const b2=await build(pages.slice(current+1));
+    // Cada parte sale del PDF guardado, con todo lo añadido en Pliego, tal como se ve
+    const flat=await PDFDocument.load(await buildFlattenedBytes());
+    const all=pages.map((_,i)=>i);
+    const b1=await pagesSubsetBytes(flat, all.slice(0,current+1));
+    const b2=await pagesSubsetBytes(flat, all.slice(current+1));
     await writeOut(h1,new Blob([b1],{type:"application/pdf"}),name+"-parte1.pdf");
     await writeOut(h2,new Blob([b2],{type:"application/pdf"}),name+"-parte2.pdf");
     toast(t("msgSplitDone"),"ok");
@@ -2309,7 +2300,7 @@ function drawOverlay(){
   // Valores de campos: se pintan fijos en la página salvo cuando Form los muestra como inputs editables
   if(!showFields && activeTool!=="edittext" && mainViewport){
     const defs=fieldDefs[pid]||[];
-    for(const f of defs) paintFieldValue(ctx,f);
+    for(const f of defs) paintFieldValue(ctx,f,ov.width,ov.height);
   }
   const list=annots[pid]||[];
   for(const a of list) paintAnnot(ctx,a,ov.width,ov.height);
@@ -2377,8 +2368,8 @@ $("#selDelBtn").onclick=()=>{
    y draw/line/arrow (redimensionar ya cambia su forma/dirección). */
 const ROTATABLE_TYPES = new Set(["rect","ellipse","highlight","redact","textmark","image","sign","text"]);
 /* Centro normalizado (0-1) de una anotación, a partir de su bounding box. */
-function annotCenter(a){
-  const bb=getBBox(a);
+function annotCenter(a, pw, ph){
+  const bb=getBBox(a, pw, ph);
   return [bb.x+bb.w/2, bb.y+bb.h/2];
 }
 /* Gira un punto (px,py) en píxeles alrededor de (cx,cy), por degDeg grados (sentido horario,
@@ -2406,17 +2397,17 @@ function overRotateHandle(p,a){
   return Math.abs(px-rh[0])<=9 && Math.abs(py-rh[1])<=9;
 }
 /* Recuadro normalizado de cualquier anotación. */
-function getBBox(a){
+function getBBox(a, pw, ph){   // pw,ph: tamaño de la página en puntos (por defecto, la página visible)
   if(a.type==="image"||a.type==="sign"||a.type==="highlight"||a.type==="edit"||a.type==="rect"||a.type==="ellipse"||a.type==="redact"||a.type==="textmark") return {x:a.x,y:a.y,w:a.w,h:a.h};
   if(a.type==="line"||a.type==="arrow"){
     return {x:Math.min(a.x1,a.x2), y:Math.min(a.y1,a.y2), w:Math.max(0.01,Math.abs(a.x2-a.x1)), h:Math.max(0.01,Math.abs(a.y2-a.y1))};
   }
   if(a.type==="text"){
-    const W=ov.width||1, H=ov.height||1, px=a.size*zoom;
-    const lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0, a);
-    measureCtx.font=textFont(px, a);
-    const wPx=a.w ? a.w*W : Math.max(0,...lines.map(l=>measureCtx.measureText(l).width));
-    return {x:a.x, y:a.y, w:Math.max(0.02,wPx/W), h:(px+(lines.length-1)*px*TEXT_LINE)/H};
+    // En puntos de página: el recuadro no cambia con el zoom y coincide con el PDF guardado.
+    const W=pw||(ov.width||1)/zoom, H=ph||(ov.height||1)/zoom, pt=a.size;
+    const lines=layoutTextBox(a.text, pt, a.w ? a.w*W : 0, a);
+    const wPt=a.w ? a.w*W : Math.max(0,...lines.map(l=>textWidth(l, pt, a)));
+    return {x:a.x, y:a.y, w:Math.max(0.02,wPt/W), h:(pt+(lines.length-1)*pt*TEXT_LINE)/H};
   }
   if(a.type==="draw"){
     let x0=1,y0=1,x1=0,y1=0; a.pts.forEach(q=>{x0=Math.min(x0,q[0]);y0=Math.min(y0,q[1]);x1=Math.max(x1,q[0]);y1=Math.max(y1,q[1]);});
@@ -2424,14 +2415,21 @@ function getBBox(a){
   }
   return {x:0,y:0,w:0,h:0};
 }
+/* ----- Pintado de lo que Pliego añade a la página -----
+   paintWatermark, paintFieldValue y paintAnnot dibujan tanto en pantalla (canvas) como al
+   guardar (PdfCanvas, más abajo): el mismo código para los dos, así el PDF sale idéntico.
+   W,H: tamaño de destino; s: unidades de destino por punto de página (en pantalla, el zoom;
+   en el PDF, 1). Los tamaños se calculan en puntos y se multiplican por s.
+   El texto se dibuja siempre con textBaseline "alphabetic" y alineado a la izquierda. */
 /* Marca de agua diagonal sobre la página. */
-function paintWatermark(ctx,W,H){
+function paintWatermark(ctx,W,H,s=zoom){
+  const pt=(W/s)*0.12, style={bold:true}, tw=textWidth(watermark.text, pt, style);
   ctx.save();
   ctx.translate(W/2,H/2); ctx.rotate(-Math.PI/6);
   ctx.globalAlpha=watermark.opacity!=null?watermark.opacity:0.18;
-  ctx.fillStyle=watermark.color||"#666666"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.font="bold "+(W*0.12)+"px Inter, Arial, sans-serif";
-  ctx.fillText(watermark.text, 0, 0);
+  ctx.fillStyle=watermark.color||"#666666"; ctx.textBaseline="alphabetic";
+  setTextFont(ctx, pt*s, style);
+  ctx.fillText(watermark.text, -tw*s/2, (TEXT_ASC-0.5)*pt*s);   // centrado en la página
   ctx.restore();
 }
 function paintSearchHit(ctx,h,W,H){
@@ -2443,77 +2441,67 @@ function paintSearchHit(ctx,h,W,H){
   ctx.fillRect(x,y,w,hh);
   ctx.restore();
 }
-function paintFieldValue(ctx,f){
+function paintFieldValue(ctx,f,W,H,s=zoom){
   const v=fieldValues[f.id]; if(v===undefined||v===""||v===false) return;
-  const vr=mainViewport.convertToViewportRectangle(f.pdfRect);
-  const x=Math.min(vr[0],vr[2]), y=Math.min(vr[1],vr[3]);
-  const w=Math.abs(vr[2]-vr[0]), h=Math.abs(vr[3]-vr[1]);
-  ctx.fillStyle="#0b1d40"; ctx.textBaseline="top";
+  const x=f.nx*W, y=f.ny*H, w=f.nw*W, h=f.nh*H;
+  const wPt=w/s, hPt=h/s, base=size=>size*TEXT_ASC*s;   // de "borde superior" a línea base
+  ctx.fillStyle="#0b1d40"; ctx.textBaseline="alphabetic";
   if(f.kind==="check"){
-    ctx.font="bold "+(Math.min(w,h)*0.85)+"px Inter, sans-serif";
-    ctx.fillText("X", x+w*0.18, y+h*0.05); return;
+    const size=Math.min(wPt,hPt)*0.85;
+    setTextFont(ctx, size*s,{bold:true});
+    ctx.fillText("X", x+w*0.18, y+h*0.05+base(size)); return;
   }
+  const str=String(v).replace(/\r\n?/g,"\n");
   if(f.multi){
-    let size=Math.min(h*0.42,17), lines=[];
-    while(size>5){ lines=wrapCanvasLines(String(v),size,w-6); if(lines.length*size*1.2<=h-2) break; size-=0.5; }
-    ctx.font=size+"px Inter, sans-serif";
-    lines.forEach((ln,k)=>ctx.fillText(ln, x+3, y+2+k*size*1.2));
+    let size=Math.min(hPt*0.42,17), lines=[];
+    while(size>5){ lines=layoutTextBox(str,size,wPt-6); if(lines.length*size*1.2<=hPt-2) break; size-=0.5; }
+    setTextFont(ctx, size*s);
+    lines.forEach((ln,k)=>ctx.fillText(ln, x+3*s, y+(2+k*size*1.2)*s+base(size)));
   } else {
-    let size=Math.min(h*0.7,18); ctx.font=size+"px Inter, sans-serif";
-    while(size>6 && ctx.measureText(String(v)).width>w-4){ size-=0.5; ctx.font=size+"px Inter, sans-serif"; }
-    ctx.fillText(String(v), x+2, y+(h-size)/2);
+    let size=Math.min(hPt*0.7,18);
+    while(size>6 && textWidth(str,size)>wPt-4) size-=0.5;
+    setTextFont(ctx, size*s);
+    ctx.fillText(str, x+2*s, y+(h-size*s)/2+base(size));
   }
 }
-function wrapCanvasLines(text,size,maxW){
-  measureCtx.font=size+"px Inter, sans-serif";
-  const out=[];
-  for(const para of text.split(/\r?\n/)){
-    if(para===""){ out.push(""); continue; }
-    let line="";
-    for(const word of para.split(/\s+/)){
-      const test=line?line+" "+word:word;
-      if(measureCtx.measureText(test).width<=maxW){ line=test; }
-      else { if(line) out.push(line); line=word; }
-    }
-    out.push(line);
-  }
-  return out;
-}
-function paintAnnot(ctx,a,W,H){
-  // Si el tipo admite rotación y tiene un ángulo distinto de 0, envolvemos el dibujo
-  // existente con una rotación del canvas alrededor del centro normalizado del bbox.
-  const rotActive = ROTATABLE_TYPES.has(a.type) && (a.rot||0)!==0;
-  if(rotActive){
-    const [cx,cy]=annotCenter(a);
-    ctx.save();
+function paintAnnot(ctx,a,W,H,s=zoom){
+  // Cada anotación empieza con el estado del canvas limpio (grosor, puntas, opacidad...)
+  // para que su aspecto no dependa de la anotación anterior.
+  ctx.save();
+  // Si el tipo admite rotación y tiene un ángulo distinto de 0, giramos el canvas
+  // alrededor del centro normalizado del bbox.
+  if(ROTATABLE_TYPES.has(a.type) && (a.rot||0)!==0){
+    const [cx,cy]=annotCenter(a, W/s, H/s);
     ctx.translate(cx*W, cy*H);
     ctx.rotate((a.rot||0)*Math.PI/180);
     ctx.translate(-cx*W, -cy*H);
   }
+  ctx.textBaseline="alphabetic";
   if(a.type==="draw"){
     ctx.strokeStyle=a.color; ctx.lineWidth=a.width*W/600; ctx.lineJoin="round"; ctx.lineCap="round";
     ctx.beginPath(); a.pts.forEach((p,i)=> i? ctx.lineTo(p[0]*W,p[1]*H) : ctx.moveTo(p[0]*W,p[1]*H)); ctx.stroke();
   } else if(a.type==="highlight"){
     ctx.fillStyle=a.color; ctx.globalAlpha=.32;
-    ctx.fillRect(a.x*W,a.y*H,a.w*W,a.h*H); ctx.globalAlpha=1;
+    ctx.fillRect(a.x*W,a.y*H,a.w*W,a.h*H);
   } else if(a.type==="text"){
     if(!a._editing){   // mientras se edita, lo muestra el editor sobre la página
-      const px=a.size*zoom, lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0, a);
-      ctx.fillStyle=a.color; ctx.font=textFont(px, a); ctx.textBaseline="top";
-      lines.forEach((ln,i)=>ctx.fillText(ln, a.x*W, a.y*H+i*px*TEXT_LINE));
+      const pt=a.size, lines=layoutTextBox(a.text, pt, a.w ? a.w*W/s : 0, a);
+      ctx.fillStyle=a.color; setTextFont(ctx, pt*s, a);
+      lines.forEach((ln,i)=>{ if(ln) ctx.fillText(ln, a.x*W, a.y*H+(TEXT_ASC+i*TEXT_LINE)*pt*s); });
     }
   } else if((a.type==="sign"||a.type==="image") && a._img){
     ctx.drawImage(a._img, a.x*W, a.y*H, a.w*W, a.h*H);
   } else if(a.type==="edit"){
     const x=a.x*W, y=a.y*H, w=a.w*W, h=a.h*H;
-    ctx.fillStyle="#ffffff"; ctx.fillRect(x-1,y-1,w+2,h+2);        // tapa el texto original
-    ctx.fillStyle=a.color||"#0b1d40"; ctx.textBaseline="top";
+    ctx.fillStyle="#ffffff"; ctx.fillRect(x-s,y-s,w+2*s,h+2*s);        // tapa el texto original
+    ctx.fillStyle=isHexColor(a.color)?a.color:"#0b1d40";
     // El tamaño parte del original detectado en el PDF (o el ajustado a mano con +/-),
     // no de la altura de la caja: solo se reduce si el texto no entra en el ancho.
-    const fontTag=(a.italic?"italic ":"")+(a.bold?"bold ":"");
-    let size=(a.userSizePt||a.size)*zoom; ctx.font=fontTag+size+"px Inter, sans-serif";
-    while(size>6 && ctx.measureText(a.text||"").width>w-2){ size-=0.5; ctx.font=fontTag+size+"px Inter, sans-serif"; }
-    ctx.fillText(a.text||"", x+1, y+(h-size)/2);
+    const str=a.text||"";
+    let size=a.userSizePt||a.size;
+    while(size>6 && textWidth(str,size,a)>w/s-2) size-=0.5;
+    setTextFont(ctx, size*s, a);
+    ctx.fillText(str, x+s, y+(h-size*s)/2+TEXT_ASC*size*s);
   } else if(a.type==="rect"||a.type==="ellipse"){
     ctx.strokeStyle=a.color; ctx.lineWidth=(a.width||2)*W/600;
     ctx.beginPath();
@@ -2526,19 +2514,19 @@ function paintAnnot(ctx,a,W,H){
     const x1=a.x1*W,y1=a.y1*H,x2=a.x2*W,y2=a.y2*H;
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
     if(a.type==="arrow"){
-      const ang=Math.atan2(y2-y1,x2-x1), hl=Math.max(8,(a.width||2)*W/180);
+      const ang=Math.atan2(y2-y1,x2-x1), hl=Math.max(8*s,(a.width||2)*W/180);
       ctx.beginPath(); ctx.moveTo(x2,y2);
       ctx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
       ctx.moveTo(x2,y2); ctx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4)); ctx.stroke();
     }
   } else if(a.type==="textmark"){
-    ctx.strokeStyle=a.color; ctx.lineWidth=Math.max(1.5,a.h*H*0.12);
+    ctx.strokeStyle=a.color; ctx.lineWidth=Math.max(1.5*s,a.h*H*0.12);
     const yy = a.mode==="strike" ? (a.y+a.h*0.55)*H : (a.y+a.h*0.92)*H;
     ctx.beginPath(); ctx.moveTo(a.x*W,yy); ctx.lineTo((a.x+a.w)*W,yy); ctx.stroke();
   } else if(a.type==="redact"){
     ctx.fillStyle=a.color||"#000"; ctx.fillRect(a.x*W,a.y*H,a.w*W,a.h*H);
   }
-  if(rotActive) ctx.restore();
+  ctx.restore();
 }
 
 /* ----- Interacción de dibujo ----- */
@@ -3572,217 +3560,210 @@ async function savePdf(){
   }catch(e){ console.error(e); toast(t("msgPdfGenError"),"err"); }
   busy(false);
 }
-/* Calcula el nuevo punto de anclaje (esquina/baseline) que hay que pasarle a pdf-lib
-   para que una figura rotada con `rotate: degrees(deg)` quede centrada en (ccx,ccy),
-   igual que se ve en pantalla (donde paintAnnot rota alrededor del centro del bbox).
-   anchorX/anchorY: punto de anclaje SIN rotar (esquina o baseline) en coords pdf-lib.
-   ccx/ccy: centro del bbox, también en coords pdf-lib.
-   degCanvas: ángulo tal como se usa en pantalla (canvas, sentido horario visual).
-   Convención de signo: pdf-lib usa rotación matemática estándar (CCW positivo) en un
-   sistema Y-arriba, mientras canvas usa rotación CW positiva en Y-abajo. Al pasar del
-   espacio canvas al espacio pdf-lib (que invierte Y), el sentido de giro se invierte una
-   vez por el cambio de eje; para que el resultado visual final sea EXACTAMENTE el mismo
-   que el usuario vio en pantalla, hay que rotar con el ángulo NEGADO (-degCanvas) dentro
-   del espacio pdf-lib. Verificado con script de prueba (ver reporte). */
-/* Centro del bbox de una anotación, convertido a coordenadas pdf-lib (Y invertido).
-   W,H: tamaño de la página de salida en puntos. */
-function annotCenterPdf(a,W,H){
-  return [ (a.x+a.w/2)*W, H-(a.y+a.h/2)*H ];
+/* ----- Guardado idéntico a la pantalla -----
+   PdfCanvas imita la parte del canvas 2D que usan paintAnnot, paintFieldValue y
+   paintWatermark, pero escribe operadores PDF en una página de pdf-lib. Al guardar se
+   llama a esas mismas funciones: lo que se ve en pantalla y lo que queda en el PDF salen
+   del mismo código, con la misma fuente, posiciones, giros, grosores y opacidades.
+   Trabaja en el sistema de la pantalla (origen arriba a la izquierda, Y hacia abajo):
+   el que lo usa invierte el eje Y una vez para toda la página. */
+const PDF_OPS = PDFLib;
+const CSS_DEFAULTS = { fillStyle:"#000000", strokeStyle:"#000000", lineWidth:1, lineCap:"butt", lineJoin:"miter",
+  globalAlpha:1, font:"10px sans-serif", textBaseline:"alphabetic" };
+function parseCssColor(c){
+  c=String(c||"#000").trim();
+  let m=/^#([0-9a-f]{3})$/i.exec(c);
+  if(m) c="#"+m[1].split("").map(x=>x+x).join("");
+  m=/^#([0-9a-f]{6})$/i.exec(c);
+  if(m){ const n=parseInt(m[1],16); return { rgb:[(n>>16&255)/255,(n>>8&255)/255,(n&255)/255], a:1 }; }
+  m=/^rgba?\(([^)]+)\)$/i.exec(c);
+  if(m){ const v=m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat); return { rgb:[v[0]/255,v[1]/255,v[2]/255], a:v.length>3?v[3]:1 }; }
+  return { rgb:[0,0,0], a:1 };
 }
-function rotatedAnchor(anchorX,anchorY,ccx,ccy,degCanvas){
-  const th=(-degCanvas)*Math.PI/180;
-  const dx=anchorX-ccx, dy=anchorY-ccy;
+class PdfCanvas{
+  constructor(doc, page, fonts, images){
+    this.doc=doc; this.page=page; this.fonts=fonts; this.images=images;
+    this.stack=[]; this.path=[]; this.alphaKeys={};
+    Object.assign(this, CSS_DEFAULTS);
+    page.node.normalize();
+  }
+  ops(...o){ this.page.pushOperators(...o); }
+  save(){ const st={}; for(const k in CSS_DEFAULTS) st[k]=this[k]; this.stack.push(st); this.ops(PDF_OPS.pushGraphicsState()); }
+  restore(){ const st=this.stack.pop(); if(!st) return; Object.assign(this, st); this.ops(PDF_OPS.popGraphicsState()); }
+  transform(a,b,c,d,e,f){ this.ops(PDF_OPS.concatTransformationMatrix(a,b,c,d,e,f)); }
+  translate(x,y){ this.transform(1,0,0,1,x,y); }
+  rotate(r){ const c=Math.cos(r), s=Math.sin(r); this.transform(c,s,-s,c,0,0); }
+  scale(x,y){ this.transform(x,0,0,y,0,0); }
+  beginPath(){ this.path=[]; }
+  moveTo(x,y){ this.path.push(PDF_OPS.moveTo(x,y)); }
+  lineTo(x,y){ this.path.push(PDF_OPS.lineTo(x,y)); }
+  closePath(){ this.path.push(PDF_OPS.closePath()); }
+  rect(x,y,w,h){ this.path.push(PDF_OPS.rectangle(x,y,w,h)); }
+  ellipse(cx,cy,rx,ry){   // solo elipses completas, que es lo que se dibuja
+    const k=0.5522847498, ox=rx*k, oy=ry*k, B=PDF_OPS.appendBezierCurve;
+    this.path.push(PDF_OPS.moveTo(cx+rx,cy),
+      B(cx+rx,cy+oy, cx+ox,cy+ry, cx,cy+ry), B(cx-ox,cy+ry, cx-rx,cy+oy, cx-rx,cy),
+      B(cx-rx,cy-oy, cx-ox,cy-ry, cx,cy-ry), B(cx+ox,cy-ry, cx+rx,cy-oy, cx+rx,cy), PDF_OPS.closePath());
+  }
+  // Opacidad: un ExtGState por valor, reutilizado en la página.
+  alphaState(alpha){
+    const k=alpha.toFixed(4);
+    if(!this.alphaKeys[k]) this.alphaKeys[k]=this.page.node.newExtGState("GS", this.doc.context.obj({ Type:"ExtGState", ca:alpha, CA:alpha }));
+    return this.alphaKeys[k];
+  }
+  paintPath(isFill){
+    const col=parseCssColor(isFill ? this.fillStyle : this.strokeStyle), alpha=this.globalAlpha*col.a;
+    if(!this.path.length || alpha<=0) return;
+    const o=[PDF_OPS.pushGraphicsState()];
+    if(alpha<1) o.push(PDF_OPS.setGraphicsState(this.alphaState(alpha)));
+    if(isFill) o.push(PDF_OPS.setFillingRgbColor(...col.rgb));
+    else o.push(PDF_OPS.setStrokingRgbColor(...col.rgb), PDF_OPS.setLineWidth(this.lineWidth),
+      PDF_OPS.setLineCap({butt:0,round:1,square:2}[this.lineCap]||0), PDF_OPS.setLineJoin({miter:0,round:1,bevel:2}[this.lineJoin]||0));
+    o.push(...this.path, isFill ? PDF_OPS.fill() : PDF_OPS.stroke(), PDF_OPS.popGraphicsState());
+    this.ops(...o);
+  }
+  fill(){ this.paintPath(true); }
+  stroke(){ this.paintPath(false); }
+  fillRect(x,y,w,h){ const keep=this.path; this.path=[PDF_OPS.rectangle(x,y,w,h)]; this.paintPath(true); this.path=keep; }
+  // Texto sobre la línea base (textBaseline "alphabetic"), alineado a la izquierda.
+  fillText(str,x,y){
+    const m=/(italic\s+)?(bold\s+)?([\d.]+)px/.exec(this.font); if(!m || !str) return;
+    const font=this.fonts.pick({ italic:!!m[1], bold:!!m[2] }), col=parseCssColor(this.fillStyle);
+    this.ops(PDF_OPS.pushGraphicsState(), PDF_OPS.concatTransformationMatrix(1,0,0,-1,x,y));   // endereza la letra
+    this.page.drawText(this.fonts.encodable(font,str), { x:0, y:0, size:parseFloat(m[3]), font, color:rgb(...col.rgb), opacity:this.globalAlpha*col.a });
+    this.ops(PDF_OPS.popGraphicsState());
+  }
+  drawImage(img,x,y,w,h){
+    const im=this.images.get(img); if(!im) return;
+    this.ops(PDF_OPS.pushGraphicsState(), PDF_OPS.concatTransformationMatrix(w,0,0,-h,x,y+h));
+    this.page.drawImage(im, { x:0, y:0, width:1, height:1, opacity:this.globalAlpha });
+    this.ops(PDF_OPS.popGraphicsState());
+  }
+}
+/* Arial (la de la pantalla) incrustada en el PDF, solo con las letras usadas y solo las
+   variantes que aparecen. Si no se puede leer, Helvetica: mismas medidas que Arial, así el
+   texto ocupa lo mismo. */
+let annotFontBytes=null;
+const fontKey=a=>(a.bold && a.italic) ? "boldItalic" : a.bold ? "bold" : a.italic ? "italic" : "regular";
+async function embedAnnotFonts(out, needed){
+  if(!annotFontBytes){
+    try{ annotFontBytes=(window.pliegoFiles && pliegoFiles.annotFonts) ? await pliegoFiles.annotFonts() : {}; }
+    catch(_){ annotFontBytes={}; }
+  }
+  if(window.fontkit) out.registerFontkit(window.fontkit);
+  const std={ regular:StandardFonts.Helvetica, bold:StandardFonts.HelveticaBold, italic:StandardFonts.HelveticaOblique, boldItalic:StandardFonts.HelveticaBoldOblique };
+  const f={};
+  for(const k of needed){
+    const b=annotFontBytes[k];
+    try{ f[k]=(b && window.fontkit) ? await out.embedFont(b,{ subset:true }) : await out.embedFont(std[k]); }
+    catch(_){ f[k]=await out.embedFont(std[k]); }
+  }
   return {
-    x: ccx + dx*Math.cos(th) - dy*Math.sin(th),
-    y: ccy + dx*Math.sin(th) + dy*Math.cos(th),
+    regular:f.regular,
+    pick:a=>f[fontKey(a)] || f.regular || Object.values(f)[0],
+    // Las letras que la fuente no puede escribir se cambian por "?" en vez de fallar el guardado.
+    encodable:(font,str)=>{
+      try{ font.encodeText(str); return str; }
+      catch(_){ return Array.from(str).map(ch=>{ try{ font.encodeText(ch); return ch; }catch(_){ return "?"; } }).join(""); }
+    },
   };
+}
+/* Imágenes y firmas de una página, incrustadas una sola vez y listas para drawImage. */
+async function embedAnnotImages(out, list, images){
+  for(const a of list){
+    if((a.type!=="image" && a.type!=="sign") || !a.data) continue;
+    if(!a._img){ a._img=new Image(); a._img.src=a.data; }
+    try{ await a._img.decode(); }catch(_){ continue; }
+    if(images.has(a._img)) continue;
+    let im;
+    if(/^data:image\/png/i.test(a.data)) im=await out.embedPng(a.data);
+    else if(/^data:image\/jpe?g/i.test(a.data)) im=await out.embedJpg(a.data);
+    else {   // otros formatos: se pasan a PNG tal como se ven
+      const c=document.createElement("canvas"); c.width=a._img.naturalWidth; c.height=a._img.naturalHeight;
+      c.getContext("2d").drawImage(a._img,0,0); im=await out.embedPng(c.toDataURL("image/png"));
+    }
+    images.set(a._img, im);
+  }
 }
 async function buildFlattenedBytes(){
     const out=await PDFDocument.create();
     const libCache={};
-    const font=await out.embedFont(StandardFonts.Helvetica);
-    // Variantes negrita/itálica para los bloques de texto editado con esos estilos.
-    const fontBold=await out.embedFont(StandardFonts.HelveticaBold);
-    const fontItalic=await out.embedFont(StandardFonts.HelveticaOblique);
-    const fontBoldItalic=await out.embedFont(StandardFonts.HelveticaBoldOblique);
-    const pickFont=a=>(a.bold && a.italic) ? fontBoldItalic : a.bold ? fontBold : a.italic ? fontItalic : font;
+    const loadSrc=async id=>libCache[id]||(libCache[id]=await PDFDocument.load(sources.find(s=>s.id===id).bytes,{ignoreEncryption:true}));
+    // Variantes de letra que se van a escribir (las demás no se incrustan)
+    const needed=new Set();
+    for(const pg of pages){
+      for(const a of annots[pg.id]||[]) if(a.type==="text"||a.type==="edit") needed.add(fontKey(a));
+      for(const f of fieldDefs[pg.id]||[]){
+        const v=fieldValues[f.id];
+        if(v!==undefined && v!=="" && v!==false) needed.add(f.kind==="check" ? "bold" : "regular");
+      }
+    }
+    if(watermark) needed.add("bold");
+    if(pageNumbering) needed.add("regular");
+    const fonts=await embedAnnotFonts(out, needed);
     // 1) Copiar páginas en el orden y rotación actuales.
-    // Las anotaciones (texto editado, formas, firmas...) se colocaron usando coordenadas
-    // normalizadas del espacio VISUAL (lo que se ve en pantalla, ya con la rotación aplicada).
-    // Si la página queda con una rotación distinta de 0° en el PDF final, pdf-lib seguiría
-    // dibujando todo en el sistema de coordenadas "crudo" (sin rotar) del PDF, desplazando y
-    // rotando visualmente cualquier cosa que dibujemos encima. Para evitarlo: las páginas con
-    // rotación (intrínseca del archivo o aplicada con "Rotar") se "enderezan" rasterizándolas
-    // en su orientación visual exacta, dejando la página final en 0°. Así el resto del código
-    // de abajo puede seguir usando coordenadas simples (a.x*W, etc.) para cualquier rotación.
+    // Las anotaciones se colocaron en coordenadas normalizadas del espacio VISUAL (lo que se
+    // ve en pantalla, ya con la rotación aplicada). Por eso cada página sale con 0° de
+    // rotación y su contenido orientado como se ve: sin girar se copia tal cual; girada, se
+    // incrusta la página original como objeto vectorial y se gira dentro de una página
+    // nueva. En los dos casos el texto y los gráficos originales siguen siendo vectoriales.
     for(const page of pages){
-      const { pg, viewport } = await getViewport(page, 1);
+      const { viewport } = await getViewport(page, 1);
       const finalRot=((viewport.rotation%360)+360)%360;
+      const src=await loadSrc(page.srcId);
       if(finalRot===0){
-        if(!libCache[page.srcId]) libCache[page.srcId]=await PDFDocument.load(sources.find(s=>s.id===page.srcId).bytes,{ignoreEncryption:true});
-        const [cp]=await out.copyPages(libCache[page.srcId],[page.srcPageIndex]);
+        const [cp]=await out.copyPages(src,[page.srcPageIndex]);
         cp.setRotation(degrees(0));
-        // Quita los campos/anotaciones originales: Pliego redibuja los valores (evita texto duplicado)
+        // Quita los campos/anotaciones originales: tampoco se ven en pantalla y Pliego
+        // redibuja los valores de los campos (evita texto duplicado)
         try{ cp.node.delete(PDFLib.PDFName.of("Annots")); }catch(_){}
         out.addPage(cp);
       } else {
-        const rscale=2.5;
-        const { viewport:rvp } = await getViewport(page, rscale);
-        const canvas=document.createElement("canvas");
-        canvas.width=rvp.width; canvas.height=rvp.height;
-        await pg.render({ canvasContext:canvas.getContext("2d"), viewport:rvp, annotationMode:ANN_DISABLE }).promise;
-        const blob=await new Promise(res=>canvas.toBlob(res,"image/png"));
-        const pngBytes=new Uint8Array(await blob.arrayBuffer());
-        const img=await out.embedPng(pngBytes);
-        const newPage=out.addPage([viewport.width, viewport.height]);
-        newPage.drawImage(img, { x:0, y:0, width:viewport.width, height:viewport.height });
+        const sp=src.getPage(page.srcPageIndex), cb=sp.getCropBox();
+        const emb=await out.embedPage(sp, { left:cb.x, bottom:cb.y, right:cb.x+cb.width, top:cb.y+cb.height });
+        const w=cb.width, h=cb.height;
+        const np=out.addPage(finalRot===180 ? [w,h] : [h,w]);
+        const at={ 90:{x:0,y:w}, 180:{x:w,y:h}, 270:{x:h,y:0} }[finalRot];
+        np.drawPage(emb, { x:at.x, y:at.y, width:w, height:h, rotate:degrees(-finalRot) });
       }
     }
     // Elimina también el formulario interactivo a nivel documento
     try{ out.catalog.delete(PDFLib.PDFName.of("AcroForm")); }catch(_){}
-    // 2) Incrustar anotaciones y valores de campos detectados
+    // 2) Lo añadido en Pliego: valores de campos, anotaciones y marca de agua, pintados por
+    // las mismas funciones que la pantalla (escala 1: un punto de página por unidad).
     const outPages=out.getPages();
     for(let i=0;i<pages.length;i++){
       const pid=pages[i].id;
       const list=annots[pid]||[];
       const defs=fieldDefs[pid]||[];
       const hasFieldVals=defs.some(f=>fieldValues[f.id]!==undefined && fieldValues[f.id]!=="" && fieldValues[f.id]!==false);
-      if(!list.length && !hasFieldVals) continue;
-      // Gracias al enderezado de páginas rotadas (arriba), aquí W,H siempre corresponden
-      // al espacio visual sin rotación: coordenadas simples para cualquier tipo de anotación.
-      const p=outPages[i]; const {width:W,height:H}=p.getSize();
-      const toY=ny=>H-ny*H; // origen pdf-lib es abajo-izquierda
-      // anotaciones
-      for(const a of list){
-        if(a.type==="draw"){
-          const col=hexToRgb(a.color); const th=Math.max(1,a.width*W/600);
-          for(let k=1;k<a.pts.length;k++){
-            p.drawLine({ start:{x:a.pts[k-1][0]*W,y:toY(a.pts[k-1][1])}, end:{x:a.pts[k][0]*W,y:toY(a.pts[k][1])}, thickness:th, color:col });
-          }
-        } else if(a.type==="highlight"){
-          const ax=a.x*W, ay=toY(a.y+a.h), [ccx,ccy]=annotCenterPdf(a,W,H);
-          const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-          p.drawRectangle({ x:rp.x, y:rp.y, width:a.w*W, height:a.h*H, color:hexToRgb(a.color), opacity:.32, rotate:degrees(a.rot||0) });
-        } else if(a.type==="text"){
-          // Una llamada por línea: pdf-lib no admite "\n" en drawText. Mismo ajuste que en pantalla.
-          const size=a.size, [ccx,ccy]=annotCenterPdf(a,W,H);
-          const tf=pickFont(a);
-          layoutTextBox(a.text, size, a.w ? a.w*W : 0, a).forEach((ln,i)=>{
-            if(!ln) return;
-            const ax=a.x*W, ay=toY(a.y)-size-i*size*TEXT_LINE;
-            const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-            p.drawText(ln,{ x:rp.x, y:rp.y, size, font:tf, color:hexToRgb(a.color), rotate:degrees(a.rot||0) });
-          });
-        } else if(a.type==="sign" || a.type==="image"){
-          const isPng = /^data:image\/png/i.test(a.data);
-          const im = isPng ? await out.embedPng(a.data) : await out.embedJpg(a.data);
-          const ax=a.x*W, ay=toY(a.y+a.h), [ccx,ccy]=annotCenterPdf(a,W,H);
-          const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-          p.drawImage(im,{ x:rp.x, y:rp.y, width:a.w*W, height:a.h*H, rotate:degrees(a.rot||0) });
-        } else if(a.type==="edit"){
-          p.drawRectangle({ x:a.x*W-1, y:toY(a.y+a.h)-1, width:a.w*W+2, height:a.h*H+2, color:rgb(1,1,1) });
-          // El tamaño parte del original detectado en el PDF (o el ajustado a mano con +/-),
-          // no de la altura de la caja: solo se reduce si el texto no entra en el ancho.
-          const editFont=pickFont(a);
-          let size=Math.max(4, a.userSizePt||a.size);
-          const maxW=a.w*W-2, str=a.text||"";
-          while(size>4 && editFont.widthOfTextAtSize(str,size)>maxW) size-=0.5;
-          p.drawText(str,{ x:a.x*W+1, y:toY(a.y+a.h)+(a.h*H-size)/2+size*0.12, size, font:editFont, color:hexToRgb(isHexColor(a.color)?a.color:"#0b1d40") });
-        } else if(a.type==="rect"){
-          const col=hexToRgb(a.color), th=Math.max(1,(a.width||2)*W/600);
-          const ax=a.x*W, ay=toY(a.y+a.h), [ccx,ccy]=annotCenterPdf(a,W,H);
-          const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-          p.drawRectangle({ x:rp.x, y:rp.y, width:a.w*W, height:a.h*H, borderColor:col, borderWidth:th,
-            color: a.fill ? hexToRgb(a.fill) : rgb(1,1,1), opacity: a.fill ? 1 : 0, rotate:degrees(a.rot||0) });
-        } else if(a.type==="ellipse"){
-          const col=hexToRgb(a.color), th=Math.max(1,(a.width||2)*W/600);
-          // La elipse en pdf-lib ya se ancla en su propio centro: el "anchor" y el centro
-          // coinciden, así que basta pasar `rotate` directamente, sin recalcular offset.
-          p.drawEllipse({ x:(a.x+a.w/2)*W, y:toY(a.y+a.h/2), xScale:a.w/2*W, yScale:a.h/2*H, borderColor:col, borderWidth:th,
-            color: a.fill ? hexToRgb(a.fill) : rgb(1,1,1), opacity: a.fill ? 1 : 0, rotate:degrees((a.rot||0)*-1) });
-        } else if(a.type==="line"||a.type==="arrow"){
-          const col=hexToRgb(a.color), th=Math.max(1,(a.width||2)*W/600);
-          const x1=a.x1*W, y1=a.y1*H, x2=a.x2*W, y2=a.y2*H;   // espacio pantalla (y hacia abajo), igual que en pantalla
-          p.drawLine({ start:{x:x1,y:H-y1}, end:{x:x2,y:H-y2}, thickness:th, color:col });
-          if(a.type==="arrow"){
-            // Misma punta de flecha que se dibuja en pantalla (paintAnnot), para que se vea igual al guardar.
-            const ang=Math.atan2(y2-y1,x2-x1), hl=Math.max(8,(a.width||2)*W/180);
-            const hx1=x2-hl*Math.cos(ang-0.4), hy1=y2-hl*Math.sin(ang-0.4);
-            const hx2=x2-hl*Math.cos(ang+0.4), hy2=y2-hl*Math.sin(ang+0.4);
-            p.drawLine({ start:{x:x2,y:H-y2}, end:{x:hx1,y:H-hy1}, thickness:th, color:col });
-            p.drawLine({ start:{x:x2,y:H-y2}, end:{x:hx2,y:H-hy2}, thickness:th, color:col });
-          }
-        } else if(a.type==="textmark"){
-          const col=hexToRgb(a.color), th=Math.max(1.2,a.h*H*0.12);
-          if(a.rot){
-            // textmark se dibuja como una línea (no hay `rotate` en drawLine): rotamos
-            // sus dos extremos manualmente alrededor del centro del bbox, en coords pdf-lib.
-            const yy=a.mode==="strike" ? toY(a.y+a.h*0.45) : toY(a.y+a.h*0.92);
-            const [ccx,ccy]=annotCenterPdf(a,W,H);
-            const p1=rotatedAnchor(a.x*W,yy,ccx,ccy,a.rot);
-            const p2=rotatedAnchor((a.x+a.w)*W,yy,ccx,ccy,a.rot);
-            p.drawLine({ start:{x:p1.x,y:p1.y}, end:{x:p2.x,y:p2.y}, thickness:th, color:col });
-          } else {
-            const yy=a.mode==="strike" ? toY(a.y+a.h*0.45) : toY(a.y+a.h*0.92);
-            p.drawLine({ start:{x:a.x*W,y:yy}, end:{x:(a.x+a.w)*W,y:yy}, thickness:th, color:col });
-          }
-        } else if(a.type==="redact"){
-          const ax=a.x*W, ay=toY(a.y+a.h), [ccx,ccy]=annotCenterPdf(a,W,H);
-          const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-          p.drawRectangle({ x:rp.x, y:rp.y, width:a.w*W, height:a.h*H, color:hexToRgb(a.color||"#000000"), rotate:degrees(a.rot||0) });
-        }
-      }
-      // valores escritos en los campos detectados
-      const ink=rgb(0.04,0.11,0.25);
-      for(const f of defs){
-        const v=fieldValues[f.id]; if(v===undefined||v===""||v===false) continue;
-        const rectH=f.nh*H, rectW=f.nw*W;
-        if(f.kind==="check"){
-          const s=Math.min(rectH,rectW)*0.9;
-          p.drawText("X",{ x:f.nx*W+(rectW-s*0.6)/2, y:toY(f.ny+f.nh)+(rectH-s)/2, size:s, font, color:ink });
-        } else if(f.multi){
-          // Campo multilínea: envuelve el texto y reduce la fuente hasta que entre alto y ancho
-          const maxW=rectW-6, topY=toY(f.ny), str=String(v);
-          let size=Math.min(13, rectH*0.5), lines=[];
-          while(size>4){
-            lines=wrapTextLines(str,font,size,maxW);
-            if(lines.length*size*1.2 <= rectH-3) break;
-            size-=0.5;
-          }
-          const lh=size*1.2;
-          lines.forEach((ln,k)=> p.drawText(ln,{ x:f.nx*W+3, y:topY-size-3-k*lh, size, font, color:ink }) );
-        } else {
-          let size=Math.max(6,Math.min(rectH*0.72,14));
-          const maxW=rectW-3;            // que quepa dentro de la caja
-          const str=String(v);
-          while(size>4 && font.widthOfTextAtSize(str,size)>maxW) size-=0.5;
-          p.drawText(str,{ x:f.nx*W+2, y:toY(f.ny+f.nh)+(rectH-size)/2+size*0.12, size, font, color:ink });
-        }
-      }
+      const hasWatermark=!!watermark && (watermark.all || i===watermark.page);
+      if(!list.length && !hasFieldVals && !hasWatermark) continue;
+      const p=outPages[i], cb=p.getCropBox(), W=cb.width, H=cb.height;
+      const images=new Map();
+      await embedAnnotImages(out, list, images);
+      const pc=new PdfCanvas(out, p, fonts, images);
+      pc.save();
+      pc.transform(1,0,0,-1, cb.x, cb.y+H);   // origen arriba a la izquierda, Y hacia abajo, como la pantalla
+      for(const f of defs) paintFieldValue(pc,f,W,H,1);
+      for(const a of list) paintAnnot(pc,a,W,H,1);
+      if(hasWatermark) paintWatermark(pc,W,H,1);
+      pc.restore();
     }
-    // 3) Marca de agua
-    if(watermark){
-      const wFont=await out.embedFont(StandardFonts.HelveticaBold);
-      const targetPages=watermark.all ? outPages : [outPages[watermark.page]||outPages[0]];
-      for(const wp of targetPages){
-        const {width:wW,height:wH}=wp.getSize(); const wSize=wW*0.1;
-        wp.drawText(watermark.text,{ x:wW*0.12, y:wH*0.42, size:wSize, font:wFont,
-          color:hexToRgb(watermark.color||"#666666"), opacity:watermark.opacity||0.18, rotate:degrees(30) });
-      }
-    }
-    // 4) Numeración de páginas
+    // 3) Numeración de páginas
     if(pageNumbering){
-      const pnSize=pageNumbering.fontSize||10;
+      const pnSize=pageNumbering.fontSize||10, font=fonts.regular;
       const margin=28; // puntos de margen respecto al borde de la página
       const total=outPages.length;
       for(let i=0;i<total;i++){
         const pn=outPages[i];
-        const {width:pnW,height:pnH}=pn.getSize();
+        const {x:pnX,y:pnY,width:pnW,height:pnH}=pn.getCropBox();
         const num=i+(pageNumbering.startNum||1);
         let label;
         if(pageNumbering.format==="pageOfTotal") label=t("pageNumFormatPageOfTotal").replace("1",num).replace("N",String(total));
         else if(pageNumbering.format==="pagAbbr") label=t("pageNumFormatPagAbbr").replace("1",num);
         else label=String(num);
+        label=fonts.encodable(font,label);
         const txtW=font.widthOfTextAtSize(label,pnSize);
         let x,y;
         switch(pageNumbering.position){
@@ -3791,7 +3772,7 @@ async function buildFlattenedBytes(){
           case "topRight":    x=pnW-margin-txtW;       y=pnH-margin; break;
           default:             x=pnW-margin-txtW;       y=margin; // bottomRight
         }
-        pn.drawText(label,{ x, y, size:pnSize, font, color:hexToRgb(pageNumbering.color||"#4d4d4d") });
+        pn.drawText(label,{ x:pnX+x, y:pnY+y, size:pnSize, font, color:hexToRgb(pageNumbering.color||"#4d4d4d") });
       }
     }
     // 5) Marcadores propios (lista plana, /Outlines de bajo nivel). Si algo falla aquí no
@@ -3833,6 +3814,13 @@ async function buildFlattenedBytes(){
     // 6) Metadatos
     applyMetadata(out);
     return await out.save();
+}
+/* Un PDF nuevo con algunas páginas (índices de `pages`) de un PDF ya guardado. */
+async function pagesSubsetBytes(flat, idxs){
+  const out=await PDFDocument.create();
+  (await out.copyPages(flat, idxs)).forEach(p=>out.addPage(p));
+  applyMetadata(out);
+  return await out.save();
 }
 
 /* ===================== MARCA DE AGUA ===================== */
@@ -4139,14 +4127,9 @@ async function extractSelection(){
   busy(true,t("msgExtracting"));
   try{
     const idxs=pages.map((p,i)=>selected.has(p.id)?i:-1).filter(i=>i>=0);
-    const out=await PDFDocument.create(); const cache={};
-    for(const i of idxs){
-      const page=pages[i];
-      if(!cache[page.srcId]) cache[page.srcId]=await PDFDocument.load(sources.find(s=>s.id===page.srcId).bytes,{ignoreEncryption:true});
-      const [cp]=await out.copyPages(cache[page.srcId],[page.srcPageIndex]);
-      cp.setRotation(degrees((cp.getRotation().angle+page.rotation)%360)); out.addPage(cp);
-    }
-    await writeOut(handle, new Blob([await out.save()],{type:"application/pdf"}), "extraccion.pdf");
+    // Las páginas salen del PDF guardado, con todo lo añadido en Pliego, tal como se ven
+    const flat=await PDFDocument.load(await buildFlattenedBytes());
+    await writeOut(handle, new Blob([await pagesSubsetBytes(flat, idxs)],{type:"application/pdf"}), "extraccion.pdf");
   }catch(e){ console.error(e); toast(t("msgExtractError"),"err"); }
   busy(false);
 }

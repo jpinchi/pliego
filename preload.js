@@ -16,7 +16,8 @@ contextBridge.exposeInMainWorld("pliegoWindow", {
 // el proceso principal para leer archivos por ruta absoluta.
 contextBridge.exposeInMainWorld("pliegoFiles", {
   openDialog: () => ipcRenderer.invoke("dialog:openPdf"),
-  readByPath: (filePath) => ipcRenderer.invoke("file:readByPath", filePath)
+  readByPath: (filePath) => ipcRenderer.invoke("file:readByPath", filePath),
+  annotFonts: () => ipcRenderer.invoke("fonts:annot")
 });
 
 // Auto-actualización
