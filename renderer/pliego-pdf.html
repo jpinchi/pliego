@@ -242,6 +242,8 @@
   .fld-size-ctl button.active{background:var(--accent);border-color:var(--accent);color:#1a1206}
   .fld-size-ctl .fld-size-del:hover{background:#5a1f1f;border-color:#d04a4a}
   .fld-size-ctl .fld-size-val{min-width:24px;text-align:center;font:600 11px var(--mono);color:var(--muted)}
+  .fld-size-ctl .fld-color{position:relative;width:22px;height:22px;border:1px solid var(--line);border-radius:4px;overflow:hidden;cursor:pointer}
+  .fld-size-ctl .fld-color input{position:absolute;inset:-4px;width:30px;height:30px;border:0;padding:0;cursor:pointer}
   .fld-badge{
     position:absolute;top:-9px;left:-1px;font:600 8px var(--mono);background:var(--accent);
     color:#1a1206;padding:0 4px;border-radius:3px;white-space:nowrap;pointer-events:none;
@@ -281,11 +283,23 @@
     border-radius:7px;padding:8px 10px;font-size:13px;font-family:inherit;
   }
   .field textarea{resize:vertical;min-height:70px;font-family:var(--mono);font-size:12px}
-  .swatches{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
-  .swatch{width:24px;height:24px;border-radius:6px;border:2px solid transparent;cursor:pointer}
-  .swatch.active{border-color:#fff}
-  .redact-swatch{width:24px;height:24px;border-radius:6px;cursor:pointer}
-  .redact-swatch.active{outline:2px solid var(--accent)}
+  /* Selector de color común: predeterminados + recientes + personalizado */
+  .color-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .color-row .cswatch{width:24px;height:24px;border-radius:6px;padding:0;cursor:pointer;
+    border:1px solid rgba(127,127,127,.35);appearance:none;-webkit-appearance:none}
+  .color-row .cswatch.active{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--ink)}
+  .color-row .cswatch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .color-row .csep{width:1px;height:18px;background:var(--line);margin:0 1px}
+  .color-row .ccustom{position:relative;width:24px;height:24px;border-radius:50%;cursor:pointer;flex:0 0 auto;
+    background:conic-gradient(#e2574c,#f0a020,#f5d90a,#46c08a,#3b82f6,#a855f7,#e2574c);
+    border:1px solid rgba(127,127,127,.35);display:grid;place-items:center}
+  .color-row .ccustom::after{content:"+";font:700 15px/1 var(--ui);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  .color-row .ccustom:focus-within{outline:2px solid var(--accent);outline-offset:3px}
+  .color-row .ccustom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+  .ctx-label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px}
+  .seg{display:flex;gap:6px;margin-bottom:12px}
+  .seg .btn{flex:1}
+  .seg .btn.on{border-color:var(--accent);background:var(--accent-soft)}
   .hint{font-size:11.5px;color:var(--muted);line-height:1.55;background:var(--panel-2);
     border:1px solid var(--line);border-radius:8px;padding:10px 11px;margin-bottom:12px}
   .hint b{color:var(--accent)}
@@ -331,7 +345,11 @@
   .sig-style-btn.active{border-color:var(--accent);background:var(--accent-soft)}
   .sig-color-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0;margin-left:4px}
   .sig-color-dot.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
-  .sig-color-row{display:flex;gap:4px;margin-bottom:12px}
+  .sig-color-row{display:flex;gap:4px;margin-bottom:12px;align-items:center}
+  .sig-color-custom{position:relative;width:26px;height:26px;border-radius:50%;margin-left:4px;cursor:pointer;flex:0 0 auto;
+    background:conic-gradient(#e2574c,#f0a020,#f5d90a,#46c08a,#3b82f6,#a855f7,#e2574c);border:2px solid var(--line)}
+  .sig-color-custom.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .sig-color-custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
   .sig-preview{background:#fff;border-radius:9px;min-height:90px;display:flex;align-items:center;
     justify-content:center;padding:10px;margin-bottom:12px;overflow:hidden}
   .sig-preview-checker{
@@ -517,6 +535,7 @@
       <div class="sig-color-row">
         <button type="button" class="sig-color-dot" data-color="#0b1d40" style="background:#0b1d40" data-i18n-title="sigColorBlack" title="Negro"></button>
         <button type="button" class="sig-color-dot" data-color="#1450c4" style="background:#1450c4" data-i18n-title="sigColorBlue" title="Azul"></button>
+        <label class="sig-color-custom" data-i18n-title="colorCustom" title="Color personalizado"><input type="color" class="sig-color-input" value="#0b1d40"></label>
       </div>
       <div class="sig-preview" id="sigTypePreviewWrap"><span id="sigTypePreview" style="font-size:30px"></span></div>
     </div>
@@ -528,6 +547,7 @@
         <button class="btn ghost" id="sigClear" data-i18n="btnClear">Limpiar</button>
         <button type="button" class="sig-color-dot" data-color="#0b1d40" style="background:#0b1d40" data-i18n-title="sigColorBlack" title="Negro"></button>
         <button type="button" class="sig-color-dot" data-color="#1450c4" style="background:#1450c4" data-i18n-title="sigColorBlue" title="Azul"></button>
+        <label class="sig-color-custom" data-i18n-title="colorCustom" title="Color personalizado"><input type="color" class="sig-color-input" value="#0b1d40"></label>
       </div>
     </div>
 
@@ -610,7 +630,7 @@
     </div>
 
     <div class="field"><label data-i18n="settingsColorLabel">Color de tinta por defecto</label></div>
-    <div class="swatches" id="settingsColorRow"></div>
+    <div id="settingsColorRow"></div>
 
     <label class="field" style="display:flex;align-items:center;gap:7px;cursor:pointer">
       <input type="checkbox" id="settingsAutoTour" style="width:auto;flex:0 0 auto">
@@ -810,6 +830,13 @@ const I18N = {
     btnUnderlineShort: "Sub",
     btnStrikeShort: "Tach",
     labelColor: "Color",
+    labelBorderColor: "Color del borde",
+    labelFill: "Relleno",
+    fillNone: "Sin relleno",
+    fillSolid: "Sólido",
+    labelFillColor: "Color del relleno",
+    labelTextColor: "Color del texto",
+    colorCustom: "Color personalizado",
     hintEmbedOnSave: "<b>Tip:</b> se incrusta al guardar PDF.",
     ctxTitleMove: "Mover",
     ctxSubMove: "Clic para seleccionar. Arrastra para mover, esquina para redimensionar. <b>Supr</b> para borrar.",
@@ -1087,6 +1114,13 @@ const I18N = {
     btnUnderlineShort: "Under",
     btnStrikeShort: "Strike",
     labelColor: "Color",
+    labelBorderColor: "Border color",
+    labelFill: "Fill",
+    fillNone: "No fill",
+    fillSolid: "Solid",
+    labelFillColor: "Fill color",
+    labelTextColor: "Text color",
+    colorCustom: "Custom color",
     hintEmbedOnSave: "<b>Tip:</b> it gets embedded when saving the PDF.",
     ctxTitleMove: "Move",
     ctxSubMove: "Click to select. Drag to move, use the corner to resize. <b>Del</b> to delete.",
@@ -1299,6 +1333,8 @@ let textCache = {};         // pageId -> elementos de texto real detectados (par
 let pageTextKind = {};      // pageId -> "real" | "scan" (define si Editar usa clic-en-palabra o recuadro vacío)
 let shapeKind = "rect";     // forma activa: line | arrow | rect | ellipse
 let markKind = "underline"; // marcado: underline | strike
+let shapeFill = false;      // rectángulo y elipse: con relleno sólido o solo contorno
+let shapeFillColor = null;  // color del relleno; null = el mismo del contorno
 let watermark = null;       // { text, opacity, all } marca de agua del documento
 let pageNumbering = null;   // { format, position, startNum, fontSize } numeración de páginas, o null si está desactivada
 let searchHits = [];        // resultados de búsqueda
@@ -1345,6 +1381,38 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 function toast(msg, type){ const t=$("#toast"); t.textContent=msg; t.className="toast show"+(type?" "+type:""); clearTimeout(t._t); t._t=setTimeout(()=>t.className="toast",2600); }
 function busy(on,msg){ $("#busyMsg").textContent=msg||t("busyProcessing"); $("#busy").classList.toggle("show",on); }
 function hexToRgb(h){ const n=parseInt(h.slice(1),16); return rgb(((n>>16)&255)/255,((n>>8)&255)/255,(n&255)/255); }
+
+/* ----- Selector de color común (predeterminados + recientes + personalizado) ----- */
+const PRESET_COLORS=["#f0a020","#e2574c","#46c08a","#3b82f6","#a855f7","#0b1d40","#111111"];
+const isHexColor=c=>/^#[0-9a-f]{6}$/i.test(c||"");
+function getRecentColors(){
+  try{ return JSON.parse(localStorage.getItem("pliego_recent_colors")||"[]").filter(isHexColor).slice(0,5); }catch(_){ return []; }
+}
+function pushRecentColor(c){
+  c=c.toLowerCase();
+  if(PRESET_COLORS.includes(c)) return;
+  const list=[c,...getRecentColors().filter(x=>x!==c)].slice(0,5);
+  try{ localStorage.setItem("pliego_recent_colors", JSON.stringify(list)); }catch(_){}
+}
+// Devuelve el HTML de una fila de color; se enlaza después con bindColorRow(fila, alElegir).
+function colorRowHtml(current, presets){
+  presets=presets||PRESET_COLORS;
+  current=(current||"").toLowerCase();
+  const recents=getRecentColors().filter(c=>!presets.includes(c));
+  if(isHexColor(current) && !presets.includes(current) && !recents.includes(current)) recents.unshift(current);
+  const sw=c=>'<button type="button" class="cswatch'+(c===current?" active":"")+'" style="background:'+c+'" data-cv="'+c+'" '+
+              'aria-label="'+c+'" aria-pressed="'+(c===current)+'" title="'+c+'"></button>';
+  return '<div class="color-row">'+presets.map(sw).join("")+
+    (recents.length?'<span class="csep" aria-hidden="true"></span>'+recents.map(sw).join(""):'')+
+    '<label class="ccustom" title="'+t("colorCustom")+'"><input type="color" value="'+(isHexColor(current)?current:"#f0a020")+'" aria-label="'+t("colorCustom")+'"></label>'+
+    '</div>';
+}
+function bindColorRow(row, onPick){
+  if(!row) return;
+  row.querySelectorAll("[data-cv]").forEach(b=>b.onclick=()=>onPick(b.dataset.cv));
+  const inp=row.querySelector('input[type="color"]');
+  if(inp) inp.onchange=()=>{ const c=inp.value.toLowerCase(); pushRecentColor(c); onPick(c); };
+}
 
 /* Mide texto para ajustar el tamaño de fuente y que quepa en la caja. */
 const measureCtx = document.createElement("canvas").getContext("2d");
@@ -2064,6 +2132,15 @@ async function layoutEditInputs(focusLast){
     sizeBox.appendChild(mkBtn("+",1));
     sizeBox.appendChild(mkToggle("B","bold",b=>b.style.fontWeight="bold"));
     sizeBox.appendChild(mkToggle("I","italic",b=>b.style.fontStyle="italic"));
+    // Color del texto de este bloque
+    const colorWrap=document.createElement("label"); colorWrap.className="fld-color"; colorWrap.title=t("labelTextColor");
+    const colorInp=document.createElement("input"); colorInp.type="color";
+    colorInp.value=isHexColor(a.color)?a.color:"#0b1d40"; colorInp.setAttribute("aria-label",t("labelTextColor"));
+    colorInp.onpointerdown=e=>e.stopPropagation();
+    colorInp.onchange=()=>{ a.color=colorInp.value; inp.style.color=a.color; pushRecentColor(a.color); drawOverlay(); commit(); };
+    colorWrap.appendChild(colorInp);
+    sizeBox.appendChild(colorWrap);
+    inp.style.color=a.color||"#0b1d40";
     // Botón para deshacer esta edición puntual (quita el bloque y deja el texto original).
     const delBtn=document.createElement("button"); delBtn.type="button"; delBtn.textContent="🗑";
     delBtn.title=t("btnDeleteEdit"); delBtn.classList.add("fld-size-del");
@@ -2237,7 +2314,7 @@ function paintWatermark(ctx,W,H){
   ctx.save();
   ctx.translate(W/2,H/2); ctx.rotate(-Math.PI/6);
   ctx.globalAlpha=watermark.opacity!=null?watermark.opacity:0.18;
-  ctx.fillStyle="#777"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle=watermark.color||"#666666"; ctx.textAlign="center"; ctx.textBaseline="middle";
   ctx.font="bold "+(W*0.12)+"px Inter, Arial, sans-serif";
   ctx.fillText(watermark.text, 0, 0);
   ctx.restore();
@@ -2319,12 +2396,13 @@ function paintAnnot(ctx,a,W,H){
     let size=(a.userSizePt||a.size)*zoom; ctx.font=fontTag+size+"px Inter, sans-serif";
     while(size>6 && ctx.measureText(a.text||"").width>w-2){ size-=0.5; ctx.font=fontTag+size+"px Inter, sans-serif"; }
     ctx.fillText(a.text||"", x+1, y+(h-size)/2);
-  } else if(a.type==="rect"){
+  } else if(a.type==="rect"||a.type==="ellipse"){
     ctx.strokeStyle=a.color; ctx.lineWidth=(a.width||2)*W/600;
-    ctx.strokeRect(a.x*W,a.y*H,a.w*W,a.h*H);
-  } else if(a.type==="ellipse"){
-    ctx.strokeStyle=a.color; ctx.lineWidth=(a.width||2)*W/600;
-    ctx.beginPath(); ctx.ellipse((a.x+a.w/2)*W,(a.y+a.h/2)*H,Math.abs(a.w/2)*W,Math.abs(a.h/2)*H,0,0,7); ctx.stroke();
+    ctx.beginPath();
+    if(a.type==="rect") ctx.rect(a.x*W,a.y*H,a.w*W,a.h*H);
+    else ctx.ellipse((a.x+a.w/2)*W,(a.y+a.h/2)*H,Math.abs(a.w/2)*W,Math.abs(a.h/2)*H,0,0,7);
+    if(a.fill){ ctx.fillStyle=a.fill; ctx.fill(); }
+    ctx.stroke();
   } else if(a.type==="line"||a.type==="arrow"){
     ctx.strokeStyle=a.color; ctx.lineWidth=(a.width||2)*W/600; ctx.lineCap="round";
     const x1=a.x1*W,y1=a.y1*H,x2=a.x2*W,y2=a.y2*H;
@@ -2362,8 +2440,12 @@ function previewShape(){
   const w=Math.abs(p[0]-rectStart[0])*W, h=Math.abs(p[1]-rectStart[1])*H;
   ctx.strokeStyle=curColor; ctx.lineWidth=2; ctx.setLineDash([4,3]);
   if(activeTool==="redact"){ ctx.fillStyle=redactColor; ctx.globalAlpha=0.55; ctx.fillRect(x,y,w,h); ctx.globalAlpha=1; }
-  else if(shapeKind==="rect"){ ctx.strokeRect(x,y,w,h); }
-  else if(shapeKind==="ellipse"){ ctx.beginPath(); ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,7); ctx.stroke(); }
+  else if(shapeKind==="rect"||shapeKind==="ellipse"){
+    ctx.beginPath();
+    if(shapeKind==="rect") ctx.rect(x,y,w,h); else ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,7);
+    if(shapeFill){ ctx.fillStyle=shapeFillColor||curColor; ctx.globalAlpha=0.6; ctx.fill(); ctx.globalAlpha=1; }
+    ctx.stroke();
+  }
   else if(shapeKind==="line"||shapeKind==="arrow"){
     ctx.beginPath(); ctx.moveTo(rectStart[0]*W,rectStart[1]*H); ctx.lineTo(p[0]*W,p[1]*H); ctx.stroke();
   }
@@ -2501,7 +2583,8 @@ ov.addEventListener("pointerup",async e=>{
     const w=Math.abs(p[0]-rectStart[0]),h=Math.abs(p[1]-rectStart[1]);
     if(w>.005||h>.005){
       if(shapeKind==="line"||shapeKind==="arrow") annots[pid].push({type:shapeKind,x1:rectStart[0],y1:rectStart[1],x2:p[0],y2:p[1],color:curColor,width:2});
-      else annots[pid].push({type:shapeKind,x,y,w:Math.max(0.005,w),h:Math.max(0.005,h),color:curColor,width:2});
+      else annots[pid].push({type:shapeKind,x,y,w:Math.max(0.005,w),h:Math.max(0.005,h),color:curColor,width:2,
+                             fill: shapeFill ? (shapeFillColor||curColor) : null});
       added=true;
     }
   } else if(activeTool==="redact" && rectStart){
@@ -2673,11 +2756,15 @@ let sigInkColor="#0b1d40";      // color de tinta compartido entre "Escribir" y 
 // Pinta todos los puntos de color (de ambas pestañas) y aplica el color elegido a lo que corresponda.
 function sigSetColor(hex){
   sigInkColor=hex;
+  const preset=[...$$(".sig-color-dot")].some(b=>b.dataset.color===hex);
   $$(".sig-color-dot").forEach(b=>b.classList.toggle("active", b.dataset.color===hex));
+  $$(".sig-color-custom").forEach(l=>l.classList.toggle("active", !preset));
+  $$(".sig-color-input").forEach(i=>{ i.value=hex; });
   const prev=$("#sigTypePreview"); if(prev) prev.style.color=hex;
   if(sigPadCtx) sigPadCtx.strokeStyle=hex;
 }
 $$(".sig-color-dot").forEach(b=>b.onclick=()=>sigSetColor(b.dataset.color));
+$$(".sig-color-input").forEach(i=>i.onchange=()=>{ pushRecentColor(i.value); sigSetColor(i.value.toLowerCase()); });
 
 let sigPadCtx=null;       // contexto 2D del lienzo de "Dibujar" (para poder cambiarle el color en caliente)
 let sigPadInited=false;   // el lienzo de "Dibujar" solo puede medirse cuando su pestaña ya es visible
@@ -2855,7 +2942,7 @@ function placeSignature(p){
 function renderToolPanel(tool){
   $("#ctxHead").textContent = t(tool.nameKey);
   const colorTools=["draw","highlight","text","shapes","markup"];
-  const swatchHtml=()=>'<div class="swatches">'+["#f0a020","#e2574c","#46c08a","#3b82f6","#a855f7","#0b1d40","#111111"].map(c=>'<div class="swatch'+(c===curColor?" active":"")+'" style="background:'+c+'" data-c="'+c+'"></div>').join("")+'</div>';
+  const closedShape = shapeKind==="rect" || shapeKind==="ellipse";
   let html="";
   if(colorTools.includes(tool.id)){
     html+='<p class="ctx-title">'+t(tool.nameKey)+'</p>';
@@ -2873,7 +2960,18 @@ function renderToolPanel(tool){
         ['<button class="btn ghost" style="flex:1;'+(markKind==="underline"?"border-color:var(--accent)":"")+'" data-mk="underline"><u>'+t("btnUnderlineShort")+'</u></button>',
          '<button class="btn ghost" style="flex:1;'+(markKind==="strike"?"border-color:var(--accent)":"")+'" data-mk="strike"><s>'+t("btnStrikeShort")+'</s></button>'].join("")+'</div>';
     }
-    html+='<label class="field"><span style="font-size:11px;font-weight:600;color:var(--muted)">'+t("labelColor")+'</span></label>'+swatchHtml();
+    const colorLabel = tool.id==="shapes" && closedShape ? t("labelBorderColor") : t("labelColor");
+    html+='<span class="ctx-label">'+colorLabel+'</span><div id="rowInk">'+colorRowHtml(curColor)+'</div>';
+    if(tool.id==="shapes" && closedShape){
+      html+='<span class="ctx-label">'+t("labelFill")+'</span>'+
+        '<div class="seg" role="group" aria-label="'+t("labelFill")+'">'+
+          '<button type="button" class="btn ghost'+(shapeFill?"":" on")+'" data-fill="0" aria-pressed="'+!shapeFill+'">'+t("fillNone")+'</button>'+
+          '<button type="button" class="btn ghost'+(shapeFill?" on":"")+'" data-fill="1" aria-pressed="'+shapeFill+'">'+t("fillSolid")+'</button>'+
+        '</div>';
+      if(shapeFill){
+        html+='<span class="ctx-label">'+t("labelFillColor")+'</span><div id="rowFill">'+colorRowHtml(shapeFillColor||curColor)+'</div>';
+      }
+    }
     html+='<div class="hint">'+t("hintEmbedOnSave")+'</div>';
   } else if(tool.id==="select"){
     html+='<p class="ctx-title">'+t("ctxTitleMove")+'</p>'+
@@ -2909,18 +3007,17 @@ function renderToolPanel(tool){
   } else if(tool.id==="redact"){
     html+='<p class="ctx-title">'+t("ctxTitleRedact")+'</p>'+
       '<p class="ctx-sub">'+t("ctxSubRedact")+'</p>'+
-      '<label class="field"><span style="font-size:11px;font-weight:600;color:var(--muted)">'+t("labelColor")+'</span></label>'+
-      '<div class="swatches">'+
-        '<div class="redact-swatch'+(redactColor==="#000000"?" active":"")+'" data-rc="#000000" style="background:#000000;border:1px solid var(--line)"></div>'+
-        '<div class="redact-swatch'+(redactColor==="#ffffff"?" active":"")+'" data-rc="#ffffff" style="background:#ffffff;border:1px solid var(--line)"></div>'+
-      '</div>'+
+      '<span class="ctx-label">'+t("labelColor")+'</span>'+
+      '<div id="rowRedact">'+colorRowHtml(redactColor,["#000000","#ffffff"])+'</div>'+
       '<div class="hint">'+t("hintRedact")+'</div>';
   }
   $("#ctxBody").innerHTML=html;
-  $("#ctxBody").querySelectorAll(".swatch").forEach(s=>s.onclick=()=>{ curColor=s.dataset.c; renderToolPanel(tool); });
+  bindColorRow($("#rowInk"),   c=>{ curColor=c; renderToolPanel(tool); });
+  bindColorRow($("#rowFill"),  c=>{ shapeFillColor=c; renderToolPanel(tool); });
+  bindColorRow($("#rowRedact"),c=>{ redactColor=c; renderToolPanel(tool); });
+  $("#ctxBody").querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{ shapeFill=b.dataset.fill==="1"; renderToolPanel(tool); });
   $("#ctxBody").querySelectorAll("[data-sk]").forEach(b=>b.onclick=()=>{ shapeKind=b.dataset.sk; renderToolPanel(tool); });
   $("#ctxBody").querySelectorAll("[data-mk]").forEach(b=>b.onclick=()=>{ markKind=b.dataset.mk; renderToolPanel(tool); });
-  $("#ctxBody").querySelectorAll("[data-rc]").forEach(b=>b.onclick=()=>{ redactColor=b.dataset.rc; renderToolPanel(tool); });
   const fst=$("#forceScanToggle");
   if(fst) fst.onchange=()=>{
     const pid=pages[current] && pages[current].id; if(!pid) return;
@@ -3184,17 +3281,19 @@ async function buildFlattenedBytes(){
           let size=Math.max(4, a.userSizePt||a.size);
           const maxW=a.w*W-2, str=a.text||"";
           while(size>4 && editFont.widthOfTextAtSize(str,size)>maxW) size-=0.5;
-          p.drawText(str,{ x:a.x*W+1, y:toY(a.y+a.h)+(a.h*H-size)/2+size*0.12, size, font:editFont, color:rgb(0.04,0.11,0.25) });
+          p.drawText(str,{ x:a.x*W+1, y:toY(a.y+a.h)+(a.h*H-size)/2+size*0.12, size, font:editFont, color:hexToRgb(isHexColor(a.color)?a.color:"#0b1d40") });
         } else if(a.type==="rect"){
           const col=hexToRgb(a.color), th=Math.max(1,(a.width||2)*W/600);
           const ax=a.x*W, ay=toY(a.y+a.h), [ccx,ccy]=annotCenterPdf(a,W,H);
           const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-          p.drawRectangle({ x:rp.x, y:rp.y, width:a.w*W, height:a.h*H, borderColor:col, borderWidth:th, color:rgb(1,1,1), opacity:0, rotate:degrees(a.rot||0) });
+          p.drawRectangle({ x:rp.x, y:rp.y, width:a.w*W, height:a.h*H, borderColor:col, borderWidth:th,
+            color: a.fill ? hexToRgb(a.fill) : rgb(1,1,1), opacity: a.fill ? 1 : 0, rotate:degrees(a.rot||0) });
         } else if(a.type==="ellipse"){
           const col=hexToRgb(a.color), th=Math.max(1,(a.width||2)*W/600);
           // La elipse en pdf-lib ya se ancla en su propio centro: el "anchor" y el centro
           // coinciden, así que basta pasar `rotate` directamente, sin recalcular offset.
-          p.drawEllipse({ x:(a.x+a.w/2)*W, y:toY(a.y+a.h/2), xScale:a.w/2*W, yScale:a.h/2*H, borderColor:col, borderWidth:th, color:rgb(1,1,1), opacity:0, rotate:degrees((a.rot||0)*-1) });
+          p.drawEllipse({ x:(a.x+a.w/2)*W, y:toY(a.y+a.h/2), xScale:a.w/2*W, yScale:a.h/2*H, borderColor:col, borderWidth:th,
+            color: a.fill ? hexToRgb(a.fill) : rgb(1,1,1), opacity: a.fill ? 1 : 0, rotate:degrees((a.rot||0)*-1) });
         } else if(a.type==="line"||a.type==="arrow"){
           const col=hexToRgb(a.color), th=Math.max(1,(a.width||2)*W/600);
           const x1=a.x1*W, y1=a.y1*H, x2=a.x2*W, y2=a.y2*H;   // espacio pantalla (y hacia abajo), igual que en pantalla
@@ -3262,7 +3361,7 @@ async function buildFlattenedBytes(){
       for(const wp of targetPages){
         const {width:wW,height:wH}=wp.getSize(); const wSize=wW*0.1;
         wp.drawText(watermark.text,{ x:wW*0.12, y:wH*0.42, size:wSize, font:wFont,
-          color:rgb(0.4,0.4,0.4), opacity:watermark.opacity||0.18, rotate:degrees(30) });
+          color:hexToRgb(watermark.color||"#666666"), opacity:watermark.opacity||0.18, rotate:degrees(30) });
       }
     }
     // 4) Numeración de páginas
@@ -3286,7 +3385,7 @@ async function buildFlattenedBytes(){
           case "topRight":    x=pnW-margin-txtW;       y=pnH-margin; break;
           default:             x=pnW-margin-txtW;       y=margin; // bottomRight
         }
-        pn.drawText(label,{ x, y, size:pnSize, font, color:rgb(0.3,0.3,0.3) });
+        pn.drawText(label,{ x, y, size:pnSize, font, color:hexToRgb(pageNumbering.color||"#4d4d4d") });
       }
     }
     // 5) Marcadores propios (lista plana, /Outlines de bajo nivel). Si algo falla aquí no
@@ -3334,16 +3433,25 @@ async function buildFlattenedBytes(){
 function renderWatermarkPanel(){
   $("#ctxHead").textContent=t("watermarkTitle");
   const w=watermark||{text:"CONFIDENCIAL",opacity:0.18,all:true};
+  let wmColor=w.color||"#666666";
+  const wmPresets=["#666666","#e2574c","#3b82f6","#0b1d40","#111111"];
   $("#ctxBody").innerHTML=
     '<p class="ctx-sub">'+t("watermarkDesc")+'</p>'+
     '<div class="field"><label>'+t("fieldWmText")+'</label><input id="wmText" value="'+escapeHtml(w.text||"CONFIDENCIAL")+'"></div>'+
     '<div class="field"><label>'+t("fieldWmOpacity")+'</label><input type="number" id="wmOpacity" value="'+(w.opacity||0.18)+'" min="0.05" max="0.5" step="0.01"></div>'+
+    '<span class="ctx-label">'+t("labelColor")+'</span><div id="rowWm">'+colorRowHtml(wmColor,wmPresets)+'</div>'+
     '<div class="field"><label><input type="checkbox" id="wmAll"'+(w.all?" checked":"")+'> '+t("labelWmAllPages")+'</label></div>'+
     '<button class="btn primary" id="wmApply" style="width:100%;margin-bottom:8px">'+t("btnApply")+'</button>'+
     '<button class="btn ghost" id="wmRemove" style="width:100%">'+t("btnRemoveWatermark")+'</button>';
+  const bindWmColor=()=>bindColorRow($("#rowWm"), c=>{
+    wmColor=c;
+    $("#rowWm").innerHTML=colorRowHtml(wmColor,wmPresets); bindWmColor();
+    if(watermark){ watermark.color=wmColor; drawOverlay(); }
+  });
+  bindWmColor();
   $("#wmApply").onclick=()=>{
     watermark={ text:$("#wmText").value||"CONFIDENCIAL", opacity:+$("#wmOpacity").value||0.18,
-      all:$("#wmAll").checked, page:current };
+      all:$("#wmAll").checked, page:current, color:wmColor };
     drawOverlay(); toast(t("msgWatermarkApplied"),"ok");
   };
   $("#wmRemove").onclick=()=>{ watermark=null; drawOverlay(); toast(t("msgWatermarkRemoved"),"ok"); };
@@ -3358,6 +3466,8 @@ function renderPageNumberingPanel(){
   $("#ctxHead").textContent=t("ctxTitlePageNum");
   const pn=pageNumbering||{format:"plain",position:"bottomRight",startNum:1,fontSize:10};
   const enabled=!!pageNumbering;
+  let pnColor=pn.color||"#4d4d4d";
+  const pnPresets=["#4d4d4d","#111111","#0b1d40","#3b82f6","#e2574c"];
   const positions=[
     ["bottomRight","posBottomRight"],["bottomLeft","posBottomLeft"],
     ["bottomCenter","posBottomCenter"],["topRight","posTopRight"],
@@ -3376,7 +3486,8 @@ function renderPageNumberingPanel(){
         positions.map(([code,key])=>'<button class="btn ghost" style="flex:1;min-width:110px;'+(pn.position===code?"border-color:var(--accent)":"")+'" data-pp="'+code+'">'+t(key)+'</button>').join("")+
       '</div></div>'+
     '<div class="field"><label>'+t("labelPageNumStart")+'</label><input type="number" id="pnStart" value="'+(pn.startNum||1)+'" min="1" step="1"></div>'+
-    '<div class="field"><label>'+t("labelPageNumSize")+'</label><input type="number" id="pnSize" value="'+(pn.fontSize||10)+'" min="6" max="48" step="1"></div>';
+    '<div class="field"><label>'+t("labelPageNumSize")+'</label><input type="number" id="pnSize" value="'+(pn.fontSize||10)+'" min="6" max="48" step="1"></div>'+
+    '<span class="ctx-label">'+t("labelColor")+'</span><div id="rowPn">'+colorRowHtml(pnColor,pnPresets)+'</div>';
 
   // Lee los controles actuales y actualiza pageNumbering (o lo apaga si el checkbox está desmarcado).
   function applyFromControls(position){
@@ -3387,10 +3498,17 @@ function renderPageNumberingPanel(){
         position: position || (pageNumbering && pageNumbering.position) || "bottomRight",
         startNum: Math.max(1, parseInt($("#pnStart").value,10)||1),
         fontSize: Math.max(6, parseFloat($("#pnSize").value)||10),
+        color: pnColor,
       };
     }
     commit();
   }
+  const bindPnColor=()=>bindColorRow($("#rowPn"), c=>{
+    pnColor=c;
+    $("#rowPn").innerHTML=colorRowHtml(pnColor,pnPresets); bindPnColor();
+    if($("#pnEnable").checked) applyFromControls();
+  });
+  bindPnColor();
   $("#pnEnable").onchange=()=>applyFromControls();
   $("#pnFormat").onchange=()=>applyFromControls();
   $("#pnStart").onchange=()=>applyFromControls();
@@ -3957,7 +4075,6 @@ try{
 }catch(_){}
 
 /* ===================== AJUSTES ===================== */
-const SETTINGS_COLORS=["#f0a020","#e2574c","#46c08a","#3b82f6","#a855f7","#0b1d40","#111111"];
 function getDefaultZoomMode(){ try{ return localStorage.getItem("pliego_default_zoom")||"fit"; }catch(_){ return "fit"; } }
 function getDefaultInkColor(){ try{ return localStorage.getItem("pliego_default_color")||curColor; }catch(_){ return curColor; } }
 function getTheme(){ try{ return localStorage.getItem("pliego_theme")||"dark"; }catch(_){ return "dark"; } }
@@ -3973,18 +4090,16 @@ function openSettings(){
   $("#settingsTheme").value=getTheme();
   $("#settingsZoom").value=getDefaultZoomMode();
   $("#settingsAutoTour").checked = localStorage.getItem("pliego_auto_tour")!=="0";
-  const defColor=getDefaultInkColor();
-  const row=$("#settingsColorRow"); row.innerHTML="";
-  SETTINGS_COLORS.forEach(c=>{
-    const sw=document.createElement("div");
-    sw.className="swatch"+(c===defColor?" active":""); sw.style.background=c; sw.dataset.c=c;
-    sw.onclick=()=>{
+  const row=$("#settingsColorRow");
+  const paintDefaultColorRow=()=>{
+    row.innerHTML=colorRowHtml(getDefaultInkColor());
+    bindColorRow(row, c=>{
       try{ localStorage.setItem("pliego_default_color", c); }catch(_){}
-      curColor=c;   // aplica de inmediato como tinta activa (firma a mano, dibujo, resaltado, formas...)
-      row.querySelectorAll(".swatch").forEach(x=>x.classList.toggle("active", x===sw));
-    };
-    row.appendChild(sw);
-  });
+      curColor=c;   // aplica de inmediato como tinta activa (dibujo, resaltado, texto, formas...)
+      paintDefaultColorRow();
+    });
+  };
+  paintDefaultColorRow();
   m.classList.add("show");
 }
 const btnSettingsEl=$("#btnSettings");
