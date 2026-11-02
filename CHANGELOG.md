@@ -5,14 +5,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [1.1.7] — 2026-11-02
 
-### Añadido
-- 
-
 ### Cambiado
-- 
+- **Guardar PDF da exactamente lo que se ve en pantalla:** el guardado usa el mismo código de dibujo que la pantalla
+- Los textos añadidos usan Arial en pantalla y en el PDF (incrustada, solo con las letras usadas)
+- Las páginas giradas se guardan vectoriales: el texto original sigue siendo seleccionable y nítido
 
 ### Corregido
-- 
+- Guardar fallaba si había un texto girado
+- El texto quedaba más abajo en el PDF y con otro espaciado entre letras
+- Rectángulos, imágenes, firmas, resaltados y tapados girados se guardaban girados al revés
+- El tachado quedaba a otra altura; el dibujo a mano y las líneas tenían las uniones cortadas
+- La marca de agua y los valores de formulario cambiaban de tamaño y posición al guardar
+- **Dividir** y **Extraer páginas** no incluían los cambios hechos en Pliego
+- Las anotaciones se desplazaban en páginas con zona de recorte (CropBox)
 
 ## [1.1.6] — 2026-11-02
 
