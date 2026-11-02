@@ -215,6 +215,24 @@
   #overlay{position:absolute;inset:0;touch-action:none}
   #overlay.drawing{cursor:crosshair}
 
+  /* Editor de texto sobre la página (herramienta Texto) */
+  .text-editor{position:absolute;z-index:7;margin:0;padding:0;border:0;resize:none;overflow:hidden;
+    background:rgba(255,255,255,.55);outline:1.5px dashed var(--accent);outline-offset:3px;
+    min-width:40px;line-height:1.25;font-family:Inter,sans-serif;caret-color:currentColor}
+
+  /* Menú contextual de las anotaciones (clic derecho) */
+  .ctx-menu{position:fixed;z-index:200;min-width:220px;padding:5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+  .ctx-menu[hidden]{display:none}
+  .ctx-menu button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:24px;
+    padding:7px 10px;border:0;border-radius:6px;background:none;color:var(--ink);
+    font:500 13px var(--ui);text-align:left;cursor:pointer}
+  .ctx-menu button:hover:not(:disabled),.ctx-menu button:focus-visible{background:var(--accent-soft);outline:none}
+  .ctx-menu button:disabled{opacity:.4;cursor:default}
+  .ctx-menu .sc{color:var(--muted);font:500 11px var(--mono)}
+  .ctx-menu .danger{color:var(--danger)}
+  .ctx-menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+
   /* Capa de campos detectados (escribir sobre la página) */
   #fieldLayer{position:absolute;inset:0;pointer-events:none}
   #fieldLayer .fld{
@@ -577,19 +595,9 @@
   </div>
 </div>
 
-<!-- Modal de texto -->
-<div class="modal-bg" id="txtModal">
-  <div class="modal">
-    <h3 data-i18n="txtModalTitle">Agregar texto</h3>
-    <p data-i18n="txtModalDesc">Se colocará en el punto donde hiciste clic.</p>
-    <div class="field"><label data-i18n="fieldText">Texto</label><input id="txtInput" data-i18n-placeholder="placeholderTxt" placeholder="Escribe aquí..."></div>
-    <div class="field"><label data-i18n="fieldSize">Tamaño</label><input type="number" id="txtSize" value="16" min="6" max="96"></div>
-    <div class="modal-actions">
-      <button class="btn ghost" id="txtCancel" data-i18n="btnCancel">Cancelar</button>
-      <button class="btn primary" id="txtOk" data-i18n="btnPlace">Colocar</button>
-    </div>
-  </div>
-</div>
+<!-- Menú contextual de anotaciones -->
+<div class="ctx-menu" id="annotMenu" role="menu" hidden></div>
+
 <!-- Agregar marcador -->
 <div class="modal-bg" id="bookmarkModal">
   <div class="modal">
@@ -746,11 +754,6 @@ const I18N = {
     sigSaveLabel: "Guardar esta firma para reutilizarla",
     msgSigTypeEmpty: "Escribe tu nombre primero",
     msgSigImageEmpty: "Sube una imagen primero",
-    txtModalTitle: "Agregar texto",
-    txtModalDesc: "Se colocará en el punto donde hiciste clic.",
-    fieldText: "Texto",
-    placeholderTxt: "Escribe aquí...",
-    fieldSize: "Tamaño",
     btnPlace: "Colocar",
     searchPlaceholder: "Buscar en el documento…",
     busyProcessing: "Procesando…",
@@ -822,7 +825,22 @@ const I18N = {
     // Paneles contextuales
     ctxDescDraw: "Dibuja a mano alzada.",
     ctxDescHighlight: "Arrastra para resaltar un área.",
-    ctxDescText: "Haz clic para insertar texto.",
+    ctxDescText: "Haz clic para escribir, o arrastra para crear una caja de texto con varias líneas.",
+    labelTextSize: "Tamaño de letra",
+    hintTextKeys: "<b>Shift+Enter</b>: nueva línea · <b>Enter</b>: terminar · <b>Esc</b>: cancelar. Haz clic sobre un texto para corregirlo.",
+    textBoxLabel: "Texto",
+    menuCut: "Cortar",
+    menuCopy: "Copiar",
+    menuPaste: "Pegar",
+    menuPasteHere: "Pegar aquí",
+    menuDuplicate: "Duplicar",
+    menuEditText: "Editar texto",
+    menuBringFront: "Traer al frente",
+    menuSendBack: "Enviar al fondo",
+    menuDelete: "Eliminar",
+    keyDelete: "Supr",
+    msgCopied: "Copiado",
+    msgCut: "Cortado",
     ctxDescShapes: "Elige forma y arrastra para dibujarla.",
     ctxDescMarkup: "Haz clic sobre una palabra para subrayarla o tacharla.",
     labelShape: "Forma",
@@ -1030,11 +1048,6 @@ const I18N = {
     sigSaveLabel: "Save this signature for reuse",
     msgSigTypeEmpty: "Type your name first",
     msgSigImageEmpty: "Upload an image first",
-    txtModalTitle: "Add text",
-    txtModalDesc: "It will be placed at the point where you clicked.",
-    fieldText: "Text",
-    placeholderTxt: "Type here...",
-    fieldSize: "Size",
     btnPlace: "Place",
     searchPlaceholder: "Search in document…",
     busyProcessing: "Processing…",
@@ -1106,7 +1119,22 @@ const I18N = {
     // Paneles contextuales
     ctxDescDraw: "Draw freehand.",
     ctxDescHighlight: "Drag to highlight an area.",
-    ctxDescText: "Click to insert text.",
+    ctxDescText: "Click to type, or drag to create a multi-line text box.",
+    labelTextSize: "Font size",
+    hintTextKeys: "<b>Shift+Enter</b>: new line · <b>Enter</b>: finish · <b>Esc</b>: cancel. Click a text to edit it.",
+    textBoxLabel: "Text",
+    menuCut: "Cut",
+    menuCopy: "Copy",
+    menuPaste: "Paste",
+    menuPasteHere: "Paste here",
+    menuDuplicate: "Duplicate",
+    menuEditText: "Edit text",
+    menuBringFront: "Bring to front",
+    menuSendBack: "Send to back",
+    menuDelete: "Delete",
+    keyDelete: "Del",
+    msgCopied: "Copied",
+    msgCut: "Cut",
     ctxDescShapes: "Choose a shape and drag to draw it.",
     ctxDescMarkup: "Click on a word to underline or strike it through.",
     labelShape: "Shape",
@@ -1335,6 +1363,7 @@ let shapeKind = "rect";     // forma activa: line | arrow | rect | ellipse
 let markKind = "underline"; // marcado: underline | strike
 let shapeFill = false;      // rectángulo y elipse: con relleno sólido o solo contorno
 let shapeFillColor = null;  // color del relleno; null = el mismo del contorno
+let textSize = 16;          // tamaño de letra (pt) de los textos nuevos
 let watermark = null;       // { text, opacity, all } marca de agua del documento
 let pageNumbering = null;   // { format, position, startNum, fontSize } numeración de páginas, o null si está desactivada
 let searchHits = [];        // resultados de búsqueda
@@ -1416,6 +1445,36 @@ function bindColorRow(row, onPick){
 
 /* Mide texto para ajustar el tamaño de fuente y que quepa en la caja. */
 const measureCtx = document.createElement("canvas").getContext("2d");
+
+/* ----- Texto multilínea ----- */
+const TEXT_LINE = 1.25;   // interlineado relativo al tamaño de letra
+const textFont = px => px+"px Inter, sans-serif";
+// Parte el texto en líneas: saltos explícitos (\n) y, si la caja tiene ancho, ajuste por palabras.
+// Se usa igual en pantalla y al exportar, para que los saltos coincidan en ambos.
+function layoutTextBox(text, px, maxW){
+  measureCtx.font=textFont(px);
+  const fits=s=>measureCtx.measureText(s).width<=maxW;
+  const lines=[];
+  for(const para of String(text||"").split("\n")){
+    if(!maxW){ lines.push(para); continue; }
+    let line="";
+    for(const tok of para.split(/(\s+)/)){
+      if(!tok) continue;
+      if(fits(line+tok)){ line+=tok; continue; }
+      if(/^\s+$/.test(tok)){ lines.push(line); line=""; continue; }
+      if(line){ lines.push(line.replace(/\s+$/,"")); line=""; }
+      let word=tok;   // palabra más ancha que la caja: se corta por letras
+      while(word.length>1 && !fits(word)){
+        let n=word.length-1;
+        while(n>1 && !fits(word.slice(0,n))) n--;
+        lines.push(word.slice(0,n)); word=word.slice(n);
+      }
+      line=word;
+    }
+    lines.push(line.replace(/\s+$/,""));
+  }
+  return lines;
+}
 function fitInputFont(inp){
   const base = parseFloat(inp.dataset.base)||14;
   const maxW = inp.clientWidth - 8;            // descuenta el padding horizontal
@@ -1557,6 +1616,8 @@ function maybeShowFirstUseHint(tool){
   try{ localStorage.setItem(key, "1"); }catch(_){}
 }
 function handleTool(tool){
+  finishTextEditor(true);
+  closeAnnotMenu();
   if(tool.kind==="action"){ maybeShowFirstUseHint(tool); if(tool.run) tool.run(); return; }
   maybeShowFirstUseHint(tool);
   activeTool = tool.id;
@@ -1722,6 +1783,7 @@ async function getViewport(page, scale){
 }
 let mainRenderTask = null;   // tarea de render en curso sobre #page, para cancelarla si llega otra antes de terminar
 async function renderMain(){
+  finishTextEditor(true);   // el cuadro de texto abierto quedaría mal colocado tras el cambio
   const tok = ++renderToken;
   if(!pages[current]) return;
   const { pg, viewport } = await getViewport(pages[current], zoom);
@@ -2300,8 +2362,11 @@ function getBBox(a){
     return {x:Math.min(a.x1,a.x2), y:Math.min(a.y1,a.y2), w:Math.max(0.01,Math.abs(a.x2-a.x1)), h:Math.max(0.01,Math.abs(a.y2-a.y1))};
   }
   if(a.type==="text"){
-    const W=ov.width||1,H=ov.height||1; measureCtx.font=(a.size*zoom)+"px Inter, sans-serif";
-    return {x:a.x, y:a.y, w:Math.max(0.02,measureCtx.measureText(a.text).width/W), h:(a.size*zoom)/H};
+    const W=ov.width||1, H=ov.height||1, px=a.size*zoom;
+    const lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0);
+    measureCtx.font=textFont(px);
+    const wPx=a.w ? a.w*W : Math.max(0,...lines.map(l=>measureCtx.measureText(l).width));
+    return {x:a.x, y:a.y, w:Math.max(0.02,wPx/W), h:(px+(lines.length-1)*px*TEXT_LINE)/H};
   }
   if(a.type==="draw"){
     let x0=1,y0=1,x1=0,y1=0; a.pts.forEach(q=>{x0=Math.min(x0,q[0]);y0=Math.min(y0,q[1]);x1=Math.max(x1,q[0]);y1=Math.max(y1,q[1]);});
@@ -2382,8 +2447,11 @@ function paintAnnot(ctx,a,W,H){
     ctx.fillStyle=a.color; ctx.globalAlpha=.32;
     ctx.fillRect(a.x*W,a.y*H,a.w*W,a.h*H); ctx.globalAlpha=1;
   } else if(a.type==="text"){
-    ctx.fillStyle=a.color; ctx.font=(a.size*zoom)+"px Inter, sans-serif"; ctx.textBaseline="top";
-    ctx.fillText(a.text, a.x*W, a.y*H);
+    if(!a._editing){   // mientras se edita, lo muestra el editor sobre la página
+      const px=a.size*zoom, lines=layoutTextBox(a.text, px, a.w ? a.w*W : 0);
+      ctx.fillStyle=a.color; ctx.font=textFont(px); ctx.textBaseline="top";
+      lines.forEach((ln,i)=>ctx.fillText(ln, a.x*W, a.y*H+i*px*TEXT_LINE));
+    }
   } else if((a.type==="sign"||a.type==="image") && a._img){
     ctx.drawImage(a._img, a.x*W, a.y*H, a.w*W, a.h*H);
   } else if(a.type==="edit"){
@@ -2452,11 +2520,15 @@ function previewShape(){
   ctx.setLineDash([]);
 }
 ov.addEventListener("pointerdown",e=>{
-  if(!pages.length) return;
+  if(!pages.length || e.button!==0) return;   // el botón derecho abre el menú contextual
   const p=ptFromEvent(e);
   if(activeTool==="draw"){ drawing=true; curPts=[p]; ov.setPointerCapture(e.pointerId); }
   else if(activeTool==="highlight"){ drawing=true; rectStart=p; ov.setPointerCapture(e.pointerId); }
-  else if(activeTool==="text"){ pendingTextPt=p; openTextModal(); }
+  else if(activeTool==="text"){
+    const hit=annotAt(p);
+    if(hit && hit.type==="text"){ openTextEditor(hit,false); return; }   // clic sobre un texto: editarlo
+    drawing=true; rectStart=p; shapeEnd=p; ov.setPointerCapture(e.pointerId);
+  }
   else if(activeTool==="sign" && signatureDataUrl){ placeSignature(p); }
   else if(activeTool==="photo" && photoDataUrl){ placePhoto(p); }
   else if(activeTool==="edittext"){
@@ -2517,7 +2589,10 @@ ov.addEventListener("pointermove",e=>{
       qx=rx/W; qy=ry/H;
     }
     const nw=Math.max(0.01,qx-resizing.ax), nh=Math.max(0.01,qy-resizing.ay);
-    if(a.type==="text"){ a.size=Math.max(6, resizing.origSize*(nh/resizing.oldH)); }
+    if(a.type==="text"){
+      if(a.w) a.w=nw;   // caja de texto: el tirador cambia el ancho y el texto se reacomoda
+      else a.size=Math.max(6, resizing.origSize*(nh/resizing.oldH));
+    }
     else if(a.type==="image"||a.type==="sign"){ a.w=nw; a.h=nw/resizing.aspect; }   // mantiene proporción
     else if(a.type==="highlight"||a.type==="rect"||a.type==="ellipse"||a.type==="redact"||a.type==="textmark"){ a.w=nw; a.h=nh; }
     else if(a.type==="edit"){
@@ -2537,9 +2612,7 @@ ov.addEventListener("pointermove",e=>{
   }
   if(moving){
     moving.moved=true;
-    const dx=p[0]-moving.start[0], dy=p[1]-moving.start[1], a=moving.a, o=moving.orig;
-    if(a.type==="draw"){ a.pts=o.pts.map(q=>[q[0]+dx,q[1]+dy]); }
-    else { a.x=o.x+dx; a.y=o.y+dy; }
+    placeFrom(moving.a, moving.orig, p[0]-moving.start[0], p[1]-moving.start[1]);
     drawOverlay(); return;
   }
   if(activeTool==="select"){
@@ -2552,7 +2625,7 @@ ov.addEventListener("pointermove",e=>{
   if(activeTool==="draw"){ curPts.push(p); previewDraw(); }
   else if(activeTool==="highlight"){ previewRect(p); }
   else if(activeTool==="shapes"||activeTool==="redact"){ shapeEnd=p; previewShape(); }
-  else if(activeTool==="edittext"){ previewOcrBox(p); }
+  else if(activeTool==="edittext" || activeTool==="text"){ previewOcrBox(p); }
 });
 /* Vista previa (recuadro punteado ámbar) mientras se arrastra para OCRear un área de un escaneo. */
 function previewOcrBox(p){
@@ -2573,6 +2646,16 @@ ov.addEventListener("pointerup",async e=>{
   const p=ptFromEvent(e);
   const pid=pages[current].id; annots[pid]=annots[pid]||[];
   let added=false;
+  if(activeTool==="text" && rectStart){
+    // Clic: texto que crece a lo ancho. Arrastre: caja de ancho fijo con ajuste de línea.
+    const box=Math.abs(p[0]-rectStart[0])>0.03;
+    const a={ type:"text", x:box?Math.min(rectStart[0],p[0]):rectStart[0], y:box?Math.min(rectStart[1],p[1]):rectStart[1],
+              text:"", size:textSize, color:curColor };
+    if(box) a.w=Math.abs(p[0]-rectStart[0]);
+    curPts=[]; rectStart=null; shapeEnd=null; drawOverlay();
+    openTextEditor(a,true);
+    return;
+  }
   if(activeTool==="draw" && curPts.length>1){ annots[pid].push({type:"draw",pts:curPts,color:curColor,width:3}); added=true; }
   else if(activeTool==="highlight" && rectStart){
     const x=Math.min(rectStart[0],p[0]),y=Math.min(rectStart[1],p[1]);
@@ -2610,7 +2693,17 @@ ov.addEventListener("pointerup",async e=>{
 
 /* ----- Mover / seleccionar / redimensionar / rotar / borrar ----- */
 let moving=null, resizing=null, rotating=null;
-function snapshot(a){ return a.type==="draw" ? { pts:a.pts.map(q=>q.slice()) } : { x:a.x, y:a.y }; }
+function snapshot(a){
+  if(a.type==="draw") return { pts:a.pts.map(q=>q.slice()) };
+  if(a.type==="line"||a.type==="arrow") return { x1:a.x1, y1:a.y1, x2:a.x2, y2:a.y2 };
+  return { x:a.x, y:a.y };
+}
+// Coloca la anotación en su posición original (snapshot) desplazada dx,dy.
+function placeFrom(a,o,dx,dy){
+  if(a.type==="draw") a.pts=o.pts.map(q=>[q[0]+dx,q[1]+dy]);
+  else if(a.type==="line"||a.type==="arrow"){ a.x1=o.x1+dx; a.y1=o.y1+dy; a.x2=o.x2+dx; a.y2=o.y2+dy; }
+  else { a.x=o.x+dx; a.y=o.y+dy; }
+}
 function overHandle(p,a){
   const bb=getBBox(a), W=ov.width||1, H=ov.height||1;
   const hx=(bb.x+bb.w)*W, hy=(bb.y+bb.h)*H;
@@ -2648,6 +2741,129 @@ function hitAnnot(a,p){
   }
   return false;
 }
+/* ===================== COPIAR / CORTAR / PEGAR ANOTACIONES ===================== */
+// Portapapeles interno de Pliego (no el del sistema). Los bloques de "Editar texto" no se copian:
+// tapan el texto original del PDF en su sitio exacto y no tienen sentido en otro lugar.
+let clipAnnot=null, clipPid=null, pasteSeq=0;
+const canCopy = a => !!a && a.type!=="edit";
+function cloneAnnot(a){
+  const c={...a}; delete c._img; delete c._editing;
+  if(a.pts) c.pts=a.pts.map(q=>q.slice());
+  return c;
+}
+function materializeAnnot(c){
+  const a=cloneAnnot(c);
+  if((a.type==="sign"||a.type==="image") && a.data){ const im=new Image(); im.onload=()=>drawOverlay(); im.src=a.data; a._img=im; }
+  return a;
+}
+function selectedOnPage(){
+  const list=(pages[current] && annots[pages[current].id])||[];
+  return selectedAnnot && list.includes(selectedAnnot) ? selectedAnnot : null;
+}
+function ensureSelectTool(){
+  if(activeTool!=="select"){ const tl=TOOLBOX.find(x=>x && x.id==="select"); if(tl) handleTool(tl); }
+}
+function copySelected(){
+  const a=selectedOnPage(); if(!canCopy(a)) return false;
+  clipAnnot=cloneAnnot(a); clipPid=pages[current].id; pasteSeq=0;
+  return true;
+}
+function deleteAnnot(a){
+  const list=annots[pages[current].id]||[]; const i=list.indexOf(a);
+  if(i<0) return;
+  list.splice(i,1); if(selectedAnnot===a) selectedAnnot=null;
+  drawOverlay(); commit();
+}
+function cutSelected(){ const a=selectedOnPage(); if(copySelected()){ deleteAnnot(a); toast(t("msgCut"),"ok"); } }
+// Inserta una copia: en el punto "at" (menú contextual) o desplazada en diagonal "step" veces
+function insertCopy(src, at, step){
+  const pid=pages[current].id; annots[pid]=annots[pid]||[];
+  const a=materializeAnnot(src);
+  let bb=getBBox(a), dx=0, dy=0;
+  if(at){ dx=at[0]-bb.x; dy=at[1]-bb.y; }
+  else if(step){ dx=dy=0.02*step; }
+  // que no se salga de la página
+  dx=Math.min(Math.max(dx,-bb.x), 1-bb.x-bb.w); dy=Math.min(Math.max(dy,-bb.y), 1-bb.y-bb.h);
+  placeFrom(a, snapshot(a), dx, dy);
+  annots[pid].push(a);
+  selectedAnnot=a; ensureSelectTool(); drawOverlay(); commit();
+}
+function pasteClipboard(at){
+  if(!clipAnnot || !pages.length) return;
+  pasteSeq++;
+  // En la misma página cada pegado se corre un poco; en otra, el primero cae en la posición original
+  const samePage=pages[current].id===clipPid;
+  insertCopy(clipAnnot, at, at ? 0 : (samePage ? pasteSeq : pasteSeq-1));
+}
+function duplicateSelected(){ const a=selectedOnPage(); if(canCopy(a)) insertCopy(cloneAnnot(a), null, 1); }
+function arrangeSelected(toFront){
+  const a=selectedOnPage(); if(!a) return;
+  const list=annots[pages[current].id]; const i=list.indexOf(a);
+  list.splice(i,1); toFront ? list.push(a) : list.unshift(a);
+  drawOverlay(); commit();
+}
+
+/* ----- Menú contextual (clic derecho) ----- */
+const annotMenu=$("#annotMenu");
+function closeAnnotMenu(){ const m=$("#annotMenu"); if(m && !m.hidden){ m.hidden=true; m.innerHTML=""; } }
+function openAnnotMenu(clientX, clientY, p){
+  finishTextEditor(true);
+  const a=annotAt(p);
+  if(a){ selectedAnnot=a; ensureSelectTool(); }
+  else selectedAnnot=null;
+  drawOverlay();
+  const can=canCopy(a), del=t("keyDelete");
+  const items = a ? [
+    { k:"menuCut",       sc:"Ctrl+X", on:can,        run:cutSelected },
+    { k:"menuCopy",      sc:"Ctrl+C", on:can,        run:()=>{ if(copySelected()) toast(t("msgCopied"),"ok"); } },
+    { k:"menuPaste",     sc:"Ctrl+V", on:!!clipAnnot, run:()=>pasteClipboard() },
+    { k:"menuDuplicate", sc:"Ctrl+D", on:can,        run:duplicateSelected },
+    "sep",
+    ...(a.type==="text" ? [{ k:"menuEditText", on:true, run:()=>openTextEditor(a,false) }] : []),
+    { k:"menuBringFront", on:true, run:()=>arrangeSelected(true) },
+    { k:"menuSendBack",   on:true, run:()=>arrangeSelected(false) },
+    "sep",
+    { k:"menuDelete", sc:del, on:true, danger:true, run:()=>deleteAnnot(a) },
+  ] : [
+    { k:"menuPasteHere", sc:"Ctrl+V", on:!!clipAnnot, run:()=>pasteClipboard(p) },
+  ];
+  annotMenu.innerHTML="";
+  for(const it of items){
+    if(it==="sep"){ annotMenu.appendChild(document.createElement("hr")); continue; }
+    const b=document.createElement("button");
+    b.type="button"; b.setAttribute("role","menuitem"); b.disabled=!it.on;
+    if(it.danger) b.classList.add("danger");
+    const lab=document.createElement("span"); lab.textContent=t(it.k); b.appendChild(lab);
+    if(it.sc){ const sc=document.createElement("span"); sc.className="sc"; sc.textContent=it.sc; b.appendChild(sc); }
+    b.onclick=()=>{ closeAnnotMenu(); it.run(); };
+    annotMenu.appendChild(b);
+  }
+  annotMenu.hidden=false;
+  const r=annotMenu.getBoundingClientRect();
+  annotMenu.style.left=Math.max(4, Math.min(clientX, window.innerWidth-r.width-4))+"px";
+  annotMenu.style.top =Math.max(4, Math.min(clientY, window.innerHeight-r.height-4))+"px";
+  const first=annotMenu.querySelector("button:not(:disabled)"); if(first) first.focus();
+}
+ov.addEventListener("contextmenu", e=>{
+  e.preventDefault();
+  if(!pages.length) return;
+  openAnnotMenu(e.clientX, e.clientY, ptFromEvent(e));
+});
+annotMenu.addEventListener("keydown", e=>{
+  const btns=[...annotMenu.querySelectorAll("button:not(:disabled)")];
+  const i=btns.indexOf(document.activeElement);
+  if(e.key==="ArrowDown"){ e.preventDefault(); btns[(i+1)%btns.length].focus(); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); btns[(i-1+btns.length)%btns.length].focus(); }
+  else if(e.key==="Home"){ e.preventDefault(); btns[0].focus(); }
+  else if(e.key==="End"){ e.preventDefault(); btns[btns.length-1].focus(); }
+  else if(e.key==="Escape"||e.key==="Tab"){ e.preventDefault(); closeAnnotMenu(); }
+  e.stopPropagation();
+});
+document.addEventListener("pointerdown", e=>{ if(!annotMenu.hidden && !annotMenu.contains(e.target)) closeAnnotMenu(); }, true);
+window.addEventListener("blur", closeAnnotMenu);
+window.addEventListener("resize", closeAnnotMenu);
+document.addEventListener("wheel", closeAnnotMenu, { passive:true });
+
 // Borrar con Supr / Tab entre campos / atajos de búsqueda
 document.addEventListener("keydown",e=>{
   const inp=e.target; const inField=inp && (inp.tagName==="INPUT"||inp.tagName==="TEXTAREA");
@@ -2660,6 +2876,14 @@ document.addEventListener("keydown",e=>{
     next.focus(); if(next.select) next.select(); return;
   }
   if(inField) return;
+  // Copiar / cortar / pegar / duplicar anotaciones
+  if((e.ctrlKey||e.metaKey) && !e.shiftKey && !e.altKey){
+    const k=e.key.toLowerCase();
+    if(k==="c" && selectedOnPage()){ if(copySelected()){ e.preventDefault(); toast(t("msgCopied"),"ok"); } return; }
+    if(k==="x" && selectedOnPage()){ e.preventDefault(); cutSelected(); return; }
+    if(k==="v" && clipAnnot && pages.length){ e.preventDefault(); pasteClipboard(); return; }
+    if(k==="d" && selectedOnPage()){ e.preventDefault(); duplicateSelected(); return; }
+  }
   if(activeTool==="select" && selectedAnnot && (e.key==="Delete"||e.key==="Backspace")){
     const list=annots[pages[current].id]||[]; const i=list.indexOf(selectedAnnot);
     if(i>=0){ list.splice(i,1); selectedAnnot=null; drawOverlay(); commit(); e.preventDefault(); }
@@ -2726,17 +2950,64 @@ function previewRect(p){ drawOverlay(); const ctx=ov.getContext("2d");
   const x=Math.min(rectStart[0],p[0]),y=Math.min(rectStart[1],p[1]),w=Math.abs(p[0]-rectStart[0]),h=Math.abs(p[1]-rectStart[1]);
   paintAnnot(ctx,{type:"highlight",x,y,w,h,color:curColor},ov.width,ov.height); }
 
-/* ----- Texto ----- */
-let pendingTextPt=null;
-function openTextModal(){ $("#txtInput").value=""; $("#txtModal").classList.add("show"); setTimeout(()=>$("#txtInput").focus(),50); }
-$("#txtCancel").onclick=()=>$("#txtModal").classList.remove("show");
-$("#txtOk").onclick=()=>{
-  const text=$("#txtInput").value.trim(); if(!text||!pendingTextPt){ $("#txtModal").classList.remove("show"); return; }
-  const size=+$("#txtSize").value||16;
-  const pid=pages[current].id; annots[pid]=annots[pid]||[];
-  annots[pid].push({type:"text",x:pendingTextPt[0],y:pendingTextPt[1],text,size,color:curColor});
-  $("#txtModal").classList.remove("show"); drawOverlay(); commit();
-};
+/* ----- Texto: se escribe directamente sobre la página ----- */
+// Enter termina, Shift+Enter hace un salto de línea, Esc cancela. Salir del cuadro también termina.
+var textEditor=null;   // { ta, a, isNew, pid } — var: se consulta desde handleTool/renderMain, que pueden correr antes
+function openTextEditor(a,isNew){
+  finishTextEditor(true);
+  if(!pages.length) return;
+  const W=ov.width, H=ov.height, px=a.size*zoom;
+  const ta=document.createElement("textarea");
+  ta.className="text-editor"; ta.value=a.text||""; ta.spellcheck=true;
+  ta.setAttribute("aria-label", t("textBoxLabel"));
+  ta.wrap=a.w ? "soft" : "off";
+  ta.style.left=(a.x*W)+"px";
+  ta.style.top=(a.y*H-(TEXT_LINE-1)/2*px)+"px";   // alinea la primera línea con el texto ya dibujado
+  ta.style.fontSize=px+"px"; ta.style.color=a.color;
+  if(a.w) ta.style.width=(a.w*W)+"px";
+  textEditor={ ta, a, isNew, pid:pages[current].id };
+  a._editing=true; drawOverlay();
+  const fit=()=>{
+    if(!a.w){ ta.style.width="0px"; ta.style.width=Math.max(40, ta.scrollWidth+px*0.5)+"px"; }
+    ta.style.height="0px"; ta.style.height=Math.max(px*TEXT_LINE, ta.scrollHeight)+"px";
+  };
+  ta.addEventListener("input", fit);
+  ta.addEventListener("keydown", e=>{
+    e.stopPropagation();
+    if(e.isComposing) return;
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); finishTextEditor(true); }
+    else if(e.key==="Escape"){ e.preventDefault(); finishTextEditor(false); }
+  });
+  ta.addEventListener("blur", ()=>finishTextEditor(true));
+  ta.addEventListener("pointerdown", e=>e.stopPropagation());
+  $("#stage").appendChild(ta); fit();
+  setTimeout(()=>{ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+}
+function finishTextEditor(save){
+  const ed=textEditor; if(!ed) return;
+  textEditor=null;   // antes de quitar el cuadro: quitarlo dispara "blur"
+  const { ta, a, isNew, pid }=ed;
+  delete a._editing;
+  const text=ta.value.replace(/\s+$/,"");
+  ta.remove();
+  const list=annots[pid]=annots[pid]||[];
+  let changed=false;
+  if(save){
+    if(!text.trim()){
+      const i=list.indexOf(a);
+      if(i>=0){ list.splice(i,1); changed=true; if(selectedAnnot===a) selectedAnnot=null; }
+    } else if(isNew){ a.text=text; list.push(a); changed=true; }
+    else if(a.text!==text){ a.text=text; changed=true; }
+  }
+  drawOverlay();
+  if(changed) commit();
+}
+// Con la herramienta Mover, doble clic sobre un texto lo edita
+ov.addEventListener("dblclick", e=>{
+  if(activeTool!=="select" || !pages.length) return;
+  const a=annotAt(ptFromEvent(e));
+  if(a && a.type==="text") openTextEditor(a,false);
+});
 
 /* ----- Firma: modal con 3 pestañas (Escribir / Dibujar / Imagen) ----- */
 // Estilos de firma manuscrita usando SOLO fuentes ya instaladas en Windows (sin remotos/@font-face).
@@ -2960,6 +3231,10 @@ function renderToolPanel(tool){
         ['<button class="btn ghost" style="flex:1;'+(markKind==="underline"?"border-color:var(--accent)":"")+'" data-mk="underline"><u>'+t("btnUnderlineShort")+'</u></button>',
          '<button class="btn ghost" style="flex:1;'+(markKind==="strike"?"border-color:var(--accent)":"")+'" data-mk="strike"><s>'+t("btnStrikeShort")+'</s></button>'].join("")+'</div>';
     }
+    if(tool.id==="text"){
+      html+='<label class="field"><span class="ctx-label">'+t("labelTextSize")+'</span>'+
+        '<input type="number" id="textSizeInp" min="6" max="96" step="1" value="'+textSize+'"></label>';
+    }
     const colorLabel = tool.id==="shapes" && closedShape ? t("labelBorderColor") : t("labelColor");
     html+='<span class="ctx-label">'+colorLabel+'</span><div id="rowInk">'+colorRowHtml(curColor)+'</div>';
     if(tool.id==="shapes" && closedShape){
@@ -2972,6 +3247,7 @@ function renderToolPanel(tool){
         html+='<span class="ctx-label">'+t("labelFillColor")+'</span><div id="rowFill">'+colorRowHtml(shapeFillColor||curColor)+'</div>';
       }
     }
+    if(tool.id==="text") html+='<div class="hint">'+t("hintTextKeys")+'</div>';
     html+='<div class="hint">'+t("hintEmbedOnSave")+'</div>';
   } else if(tool.id==="select"){
     html+='<p class="ctx-title">'+t("ctxTitleMove")+'</p>'+
@@ -3016,6 +3292,8 @@ function renderToolPanel(tool){
   bindColorRow($("#rowFill"),  c=>{ shapeFillColor=c; renderToolPanel(tool); });
   bindColorRow($("#rowRedact"),c=>{ redactColor=c; renderToolPanel(tool); });
   $("#ctxBody").querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{ shapeFill=b.dataset.fill==="1"; renderToolPanel(tool); });
+  const tsi=$("#textSizeInp");
+  if(tsi) tsi.onchange=()=>{ textSize=Math.max(6, Math.min(96, parseFloat(tsi.value)||16)); tsi.value=textSize; };
   $("#ctxBody").querySelectorAll("[data-sk]").forEach(b=>b.onclick=()=>{ shapeKind=b.dataset.sk; renderToolPanel(tool); });
   $("#ctxBody").querySelectorAll("[data-mk]").forEach(b=>b.onclick=()=>{ markKind=b.dataset.mk; renderToolPanel(tool); });
   const fst=$("#forceScanToggle");
@@ -3264,9 +3542,14 @@ async function buildFlattenedBytes(){
           const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
           p.drawRectangle({ x:rp.x, y:rp.y, width:a.w*W, height:a.h*H, color:hexToRgb(a.color), opacity:.32, rotate:degrees(a.rot||0) });
         } else if(a.type==="text"){
-          const size=a.size, ax=a.x*W, ay=toY(a.y)-size, [ccx,ccy]=annotCenterPdf(a,W,H);
-          const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
-          p.drawText(a.text,{ x:rp.x, y:rp.y, size, font, color:hexToRgb(a.color), rotate:degrees(a.rot||0) });
+          // Una llamada por línea: pdf-lib no admite "\n" en drawText. Mismo ajuste que en pantalla.
+          const size=a.size, [ccx,ccy]=annotCenterPdf(a,W,H);
+          layoutTextBox(a.text, size, a.w ? a.w*W : 0).forEach((ln,i)=>{
+            if(!ln) return;
+            const ax=a.x*W, ay=toY(a.y)-size-i*size*TEXT_LINE;
+            const rp=(a.rot||0) ? rotatedAnchor(ax,ay,ccx,ccy,a.rot) : {x:ax,y:ay};
+            p.drawText(ln,{ x:rp.x, y:rp.y, size, font, color:hexToRgb(a.color), rotate:degrees(a.rot||0) });
+          });
         } else if(a.type==="sign" || a.type==="image"){
           const isPng = /^data:image\/png/i.test(a.data);
           const im = isPng ? await out.embedPng(a.data) : await out.embedJpg(a.data);
