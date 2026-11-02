@@ -6,13 +6,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 ## [1.1.5] — 2026-11-02
 
 ### Añadido
-- 
+- **Caja de texto:** en la herramienta Texto, clic para escribir o arrastrar para crear una caja con ajuste de línea. **Shift+Enter** hace un salto de línea, **Enter** termina y **Esc** cancela
+- Corregir un texto ya puesto: clic sobre él con Texto, doble clic con Mover o **Editar texto** en el menú
+- **Menú contextual (clic derecho)** en formas, textos, dibujos, imágenes y firmas: Cortar, Copiar, Pegar, Duplicar, Traer al frente, Enviar al fondo y Eliminar. En una zona vacía, **Pegar aquí**
+- Atajos **Ctrl+C**, **Ctrl+X**, **Ctrl+V** y **Ctrl+D** (duplicar); se puede pegar en otra página
 
 ### Cambiado
-- 
+- El texto se escribe directamente sobre la página, en lugar de en una ventana aparte; el tamaño de letra está en el panel de la herramienta
 
 ### Corregido
-- 
+- Las líneas y flechas no se podían mover con la herramienta Mover
 
 ## [1.1.4] — 2026-11-02
 
