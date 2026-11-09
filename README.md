@@ -15,8 +15,8 @@
 
 <br/>
 
-<a href="https://github.com/jpinchi/pliego/releases/download/v1.1.7/Pliego-Setup-1.1.7.exe"><img src="https://img.shields.io/badge/Descargar_instalador_v1.1.7-f0a020?style=for-the-badge&logo=windows&logoColor=1a1206&labelColor=f0a020&color=f0a020" alt="Descargar el instalador de la versión 1.1.7" /></a>
-<a href="https://github.com/jpinchi/pliego/releases/download/v1.1.7/Pliego-1.1.7.exe"><img src="https://img.shields.io/badge/Versi%C3%B3n_portable-1c2128?style=for-the-badge&logo=windows&logoColor=white" alt="Descargar la versión portable 1.1.7" /></a>
+<a href="https://github.com/jpinchi/pliego/releases/download/v1.1.8/Pliego-Setup-1.1.8.exe"><img src="https://img.shields.io/badge/Descargar_instalador_v1.1.8-f0a020?style=for-the-badge&logo=windows&logoColor=1a1206&labelColor=f0a020&color=f0a020" alt="Descargar el instalador de la versión 1.1.8" /></a>
+<a href="https://github.com/jpinchi/pliego/releases/download/v1.1.8/Pliego-1.1.8.exe"><img src="https://img.shields.io/badge/Versi%C3%B3n_portable-1c2128?style=for-the-badge&logo=windows&logoColor=white" alt="Descargar la versión portable 1.1.8" /></a>
 <a href="#funciones"><img src="https://img.shields.io/badge/Ver_funciones-1c2128?style=for-the-badge&logo=googledocs&logoColor=f0a020" alt="Ver funciones" /></a>
 
 </div>
@@ -90,12 +90,12 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
   <img src="docs/readme/h-instalacion.svg" alt="04 · Instalación" width="100%" />
 </picture>
 
-**Versión actual: 1.1.7** · [Novedades](https://github.com/jpinchi/pliego/releases/tag/v1.1.7) · [Historial de cambios](CHANGELOG.md)
+**Versión actual: 1.1.8** · [Novedades](https://github.com/jpinchi/pliego/releases/tag/v1.1.8) · [Historial de cambios](CHANGELOG.md)
 
 ### Opción A — Instalador (recomendado)
 
 1. Ve a la [**última versión**](https://github.com/jpinchi/pliego/releases/latest)
-2. Descarga `Pliego-Setup-1.1.7.exe`
+2. Descarga `Pliego-Setup-1.1.8.exe`
 3. Ejecuta el instalador y sigue los pasos. No necesita permisos de administrador: se instala solo para tu usuario
 4. Abre Pliego desde el menú Inicio o el acceso directo del escritorio
 
@@ -103,7 +103,7 @@ Pliego es una app de escritorio que te permite **editar, firmar y anotar PDFs** 
 
 ### Opción B — Versión portable (sin instalar)
 
-1. Descarga `Pliego-1.1.7.exe` desde la [**última versión**](https://github.com/jpinchi/pliego/releases/latest)
+1. Descarga `Pliego-1.1.8.exe` desde la [**última versión**](https://github.com/jpinchi/pliego/releases/latest)
 2. Ejecuta directamente — no necesita instalación ni permisos de administrador
 
 > La versión portable no se actualiza sola: para tener una versión nueva, descárgala otra vez.
@@ -116,7 +116,7 @@ La versión instalada se mantiene al día sola:
 - Cuando está lista aparece un aviso con el botón **Reiniciar**: instala en silencio y vuelve a abrir Pliego. Si prefieres seguir trabajando, se instala sola al cerrar la app.
 - También puedes buscar cuando quieras en **Ajustes → Actualizaciones → Buscar actualizaciones**, donde además ves la versión instalada.
 
-> Si tienes la **1.0.0**, instala la 1.1.7 a mano una vez: esa versión no tenía actualizador. Desde la **1.1.0, 1.1.1 o 1.1.2**, el botón Reiniciar del aviso no responde; cierra Pliego y la actualización se instalará al salir.
+> Si tienes la **1.0.0**, instala la 1.1.8 a mano una vez: esa versión no tenía actualizador. Desde la **1.1.0, 1.1.1 o 1.1.2**, el botón Reiniciar del aviso no responde; cierra Pliego y la actualización se instalará al salir.
 
 ### Opción C — Ejecutar desde el código fuente
 
@@ -231,6 +231,6 @@ pdf-lib no tiene una API de alto nivel para `/Outlines`. La solución fue escrib
 <details>
 <summary>🇺🇸 English summary</summary>
 
-**Pliego** is a Windows desktop PDF editor built with Electron 31. It lets you annotate, sign, redact, fill forms, add watermarks, manage bookmarks and page numbers — all on your PC with no servers, no account or subscription required. The renderer is a single vanilla-JS HTML file using pdf.js for rendering and pdf-lib for generating the output PDF. Current version: **1.1.7** — download `Pliego-Setup-1.1.7.exe` from the [latest release](https://github.com/jpinchi/pliego/releases/latest) or clone and run with `npm install && npm start`. The installed app updates itself from GitHub Releases (the only network request it makes; your documents never leave your PC), and you can also check manually in **Settings → Updates**.
+**Pliego** is a Windows desktop PDF editor built with Electron 31. It lets you annotate, sign, redact, fill forms, add watermarks, manage bookmarks and page numbers — all on your PC with no servers, no account or subscription required. The renderer is a single vanilla-JS HTML file using pdf.js for rendering and pdf-lib for generating the output PDF. Current version: **1.1.8** — download `Pliego-Setup-1.1.8.exe` from the [latest release](https://github.com/jpinchi/pliego/releases/latest) or clone and run with `npm install && npm start`. The installed app updates itself from GitHub Releases (the only network request it makes; your documents never leave your PC), and you can also check manually in **Settings → Updates**.
 
 </details>

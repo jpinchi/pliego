@@ -3,6 +3,17 @@
 Todos los cambios notables de Pliego se documentan aquí.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
+## [1.1.8] — 2026-11-09
+
+### Añadido
+- 
+
+### Cambiado
+- 
+
+### Corregido
+- 
+
 ## [1.1.7] — 2026-11-02
 
 ### Cambiado
