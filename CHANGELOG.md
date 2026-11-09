@@ -5,14 +5,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [1.1.8] — 2026-11-09
 
-### Añadido
-- 
-
 ### Cambiado
-- 
+- **Aviso de actualización lista** rediseñado: tarjeta abajo a la derecha con icono, título y explicación, botones **Más tarde** y **Reiniciar**, y ✕ (o Esc) para cerrarla
+- La tarjeta entra con un movimiento suave y sale más rápido; con "reducir animaciones" solo se desvanece
+- Los avisos de éxito y error muestran el estado con una franja de color y el texto en el color normal
 
 ### Corregido
-- 
+- El texto de los avisos verde o rojo claro casi no se leía con el tema claro
+- Cualquier otro aviso (por ejemplo "Guardado") borraba el de actualización lista
 
 ## [1.1.7] — 2026-11-02
 
